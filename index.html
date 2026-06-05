@@ -1,124 +1,84 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#0b0c10">
-<title>TiDyn Matrix Command Centre</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>TiDyn Matrix Engine v2</title>
 
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
-<script src="https://unpkg.com/lucide@latest"></script>
 
 <style>
-  body{background:#0b0c10;color:#e5e7eb;font-family:system-ui;}
+  body{background:#0b0c10;color:#e5e7eb;font-family:system-ui}
   [v-cloak]{display:none}
-  .card{background:#111318;border:1px solid #1e2229;border-radius:12px}
+  .card{background:#111318;border:1px solid #1e2229;border-radius:12px;padding:12px}
   .btn{background:#c5a059;color:#0b0c10;font-weight:700;padding:10px;border-radius:8px}
-  .btn:hover{background:#d4b06a}
-  input{background:#0b0c10;border:1px solid #1e2229;color:white;padding:6px;border-radius:6px}
+  input{background:#0b0c10;border:1px solid #1e2229;color:white;padding:6px;border-radius:6px;width:100%}
 </style>
-
 </head>
 
 <body>
 <div id="app" v-cloak>
 
-<header style="padding:14px;border-bottom:1px solid #1e2229">
-  <div style="display:flex;justify-content:space-between;align-items:center">
-    <div>
-      <div style="font-weight:800">TiDyn MATRIX</div>
-      <div style="font-size:10px;color:#777">Production Engine</div>
-    </div>
-
-    <div style="font-size:11px;color:#10b981">LIVE SYSTEM</div>
-  </div>
+<header style="padding:12px;border-bottom:1px solid #1e2229">
+  <b>TiDyn MATRIX ENGINE v2</b>
 </header>
 
-<main style="max-width:1100px;margin:auto;padding:16px">
+<main style="max-width:1100px;margin:auto;padding:14px">
 
-<!-- NAV -->
-<div style="display:flex;gap:8px;margin-bottom:12px">
-  <button class="btn" @click="tab='calc'">Calculator</button>
-  <button class="btn" @click="tab='check'">Checklist</button>
+<!-- INPUT -->
+<div class="card" style="margin-bottom:12px">
+  <div style="font-size:12px;color:#aaa;margin-bottom:8px">
+    Enter BTTS No Odds (4 Matches)
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+    <input v-for="(m,i) in state.matches" :key="i"
+      v-model.number="state.matches[i].odds"
+      placeholder="Odds"/>
+  </div>
 </div>
 
-<!-- ================= CALCULATOR ================= -->
-<div v-if="tab==='calc'">
+<button class="btn" @click="generate">
+  Generate 6 Matrices
+</button>
 
-  <div class="card" style="padding:12px;margin-bottom:12px">
-    <div style="font-size:12px;color:#aaa">Bankroll</div>
-    <input type="number" v-model.number="state.bankroll" style="width:100%;font-size:20px;font-weight:700">
-  </div>
+<!-- MATRICES -->
+<div v-if="matrices.length" style="margin-top:14px;display:grid;gap:10px">
 
-  <div class="card" style="padding:12px;margin-bottom:12px">
-    <div style="font-size:12px;color:#aaa;margin-bottom:6px">Match Odds (BTTS No)</div>
+  <div v-for="(m,i) in matrices" :key="i" class="card">
 
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
-      <input v-for="(o,i) in state.odds" :key="i"
-        type="number" step="0.01"
-        v-model.number="state.odds[i]">
-    </div>
-  </div>
-
-  <div class="card" style="padding:12px;margin-bottom:12px">
     <div style="display:flex;justify-content:space-between">
-      <div>Matrix Stake</div>
-      <b>${{ fmt(matrixStake) }}</b>
+      <b>Matrix {{ i+1 }}</b>
+      <span style="color:#c5a059">Parlay: {{ m.parlay.toFixed(2) }}x</span>
     </div>
-    <div style="display:flex;justify-content:space-between">
-      <div>Round Stake</div>
-      <b>${{ fmt(roundStake) }}</b>
-    </div>
-  </div>
 
-  <button class="btn" @click="generate">Generate Matrices</button>
+    <div style="margin-top:10px;font-size:12px">
 
-  <div v-if="matrices.length" style="margin-top:16px;display:grid;gap:10px">
+      <div v-for="s in m.slips" :key="s.label"
+        style="display:flex;justify-content:space-between;margin:4px 0">
 
-    <div v-for="(m,i) in matrices" :key="i" class="card" style="padding:12px">
-      <div style="display:flex;justify-content:space-between">
-        <b>Matrix {{ i+1 }}</b>
-        <span>Parlay {{ m.parlay.toFixed(2) }}x</span>
+        <span>{{ s.label }}</span>
+        <b>${{ fmt(s.stake) }}</b>
+
       </div>
 
-      <div style="margin-top:10px;font-size:12px">
-        <div>Yes A stake: ${{ fmt(m.yesA) }}</div>
-        <div>Yes B stake: ${{ fmt(m.yesB) }}</div>
-        <div>No A stake: ${{ fmt(m.noA) }}</div>
-        <div>No B stake: ${{ fmt(m.noB) }}</div>
-        <div>Parlay stake: ${{ fmt(m.parlayStake) }}</div>
-      </div>
     </div>
 
   </div>
 
 </div>
 
-<!-- ================= CHECKLIST ================= -->
-<div v-if="tab==='check'">
+<!-- SUMMARY -->
+<div v-if="matrices.length" class="card" style="margin-top:14px">
 
-  <div v-if="!slips.length" style="color:#777">Generate matrices first.</div>
+  <b>Round Summary</b>
 
-  <div v-else>
+  <div style="margin-top:10px;font-size:12px">
 
-    <div style="margin-bottom:10px">
-      Progress: {{ done }}/{{ slips.length }}
-    </div>
-
-    <div style="height:6px;background:#1e2229;border-radius:10px;margin-bottom:12px">
-      <div :style="{width:progress+'%'}" style="height:6px;background:#10b981;border-radius:10px"></div>
-    </div>
-
-    <div v-for="(s,i) in slips" :key="i" class="card" style="padding:10px;margin-bottom:6px">
-      <label style="display:flex;justify-content:space-between;align-items:center">
-        <div>
-          <input type="checkbox" v-model="s.done">
-          {{ s.label }}
-        </div>
-        <b>${{ fmt(s.amount) }}</b>
-      </label>
-    </div>
+    <div>Total Matrices: {{ matrices.length }}</div>
+    <div>Total Stake: ${{ fmt(totalStake) }}</div>
+    <div>Per Matrix Stake: ${{ fmt(matrixStake) }}</div>
 
   </div>
 
@@ -128,89 +88,113 @@
 </div>
 
 <script>
-const { createApp, reactive, computed, watch } = Vue;
+const { createApp, reactive, ref, computed } = Vue;
 
 createApp({
-  setup() {
 
-    const state = reactive({
-      bankroll: 1000,
-      odds: [1.8, 2.0, 2.2, 2.5]
+setup() {
+
+  // =====================
+  // STATE
+  // =====================
+  const state = reactive({
+    bankroll: 1000,
+    matches: [
+      { name: "A", odds: 2.0 },
+      { name: "B", odds: 2.1 },
+      { name: "C", odds: 2.3 },
+      { name: "D", odds: 2.4 }
+    ]
+  });
+
+  const matrices = ref([]);
+
+  // =====================
+  // ENGINE SETTINGS
+  // =====================
+  const matrixStake = computed(() => state.bankroll * 0.0278);
+
+  // =====================
+  // MATRIX ENGINE
+  // =====================
+  function generatePairs(arr) {
+    const pairs = [];
+    for (let i = 0; i < arr.length; i++) {
+      for (let j = i + 1; j < arr.length; j++) {
+        pairs.push([arr[i], arr[j]]);
+      }
+    }
+    return pairs;
+  }
+
+  function generate() {
+
+    const pairs = generatePairs(state.matches);
+
+    matrices.value = pairs.map((p) => {
+
+      const a = p[0];
+      const b = p[1];
+
+      const parlay = a.odds * b.odds;
+
+      // =====================
+      // CORE SLIP STRUCTURE
+      // (PLACEHOLDER FOR YOUR LINEAR SOLVER)
+      // =====================
+      const slips = [
+        {
+          label: `YES ${a.name}`,
+          stake: matrixStake.value * 0.8
+        },
+        {
+          label: `YES ${b.name}`,
+          stake: matrixStake.value * 0.8
+        },
+        {
+          label: `NO ${a.name}`,
+          stake: matrixStake.value * 1.2
+        },
+        {
+          label: `NO ${b.name}`,
+          stake: matrixStake.value * 1.2
+        },
+        {
+          label: `PARLAY NO/NO`,
+          stake: matrixStake.value * 0.6
+        }
+      ];
+
+      return { parlay, slips };
+
     });
 
-    const tab = Vue.ref("calc");
-    const matrices = Vue.ref([]);
-    const slips = Vue.ref([]);
-
-    // LOAD SAVE
-    const saved = localStorage.getItem("tidyn-matrix");
-    if (saved) Object.assign(state, JSON.parse(saved));
-
-    watch(state, () => {
-      localStorage.setItem("tidyn-matrix", JSON.stringify(state));
-    }, { deep: true });
-
-    const matrixStake = computed(() => state.bankroll * 0.0278);
-    const roundStake = computed(() => matrixStake.value * 6);
-
-    function generate() {
-      const m = [];
-
-      for (let i = 0; i < 6; i++) {
-        const a = state.odds[i % 4];
-        const b = state.odds[(i + 1) % 4];
-
-        const parlay = a * b;
-
-        const obj = {
-          parlay,
-          yesA: 0.8,
-          yesB: 0.8,
-          noA: 1.2,
-          noB: 1.2,
-          parlayStake: 0.6
-        };
-
-        m.push(obj);
-      }
-
-      matrices.value = m;
-
-      // build slips
-      slips.value = m.flatMap((x, i) => ([
-        { label: `Matrix ${i+1} YES A`, amount: matrixStake.value * x.yesA, done:false },
-        { label: `Matrix ${i+1} YES B`, amount: matrixStake.value * x.yesB, done:false },
-        { label: `Matrix ${i+1} NO A`, amount: matrixStake.value * x.noA, done:false },
-        { label: `Matrix ${i+1} NO B`, amount: matrixStake.value * x.noB, done:false },
-        { label: `Matrix ${i+1} PARLAY`, amount: matrixStake.value * x.parlayStake, done:false }
-      ]));
-    }
-
-    const done = computed(() =>
-      slips.value.filter(s => s.done).length
-    );
-
-    const progress = computed(() =>
-      slips.value.length ? (done.value / slips.value.length) * 100 : 0
-    );
-
-    function fmt(n){ return Number(n).toFixed(2); }
-
-    return {
-      state,
-      tab,
-      matrices,
-      slips,
-      matrixStake,
-      roundStake,
-      generate,
-      fmt,
-      done,
-      progress
-    };
   }
+
+  // =====================
+  // SUMMARY
+  // =====================
+  const totalStake = computed(() =>
+    matrices.value.reduce((sum, m) =>
+      sum + m.slips.reduce((s, x) => s + x.stake, 0), 0
+    )
+  );
+
+  function fmt(n){ return Number(n).toFixed(2); }
+
+  return {
+    state,
+    matrices,
+    generate,
+    matrixStake,
+    totalStake,
+    fmt
+  };
+
+}
+
 }).mount("#app");
 </script>
 
 </body>
-    </html>
+</html>
