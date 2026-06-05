@@ -3,198 +3,359 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>TiDyn Matrix Engine v2</title>
-
+<title>TiDyn Matrix Engine v2 – Tracker</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
-
 <style>
   body{background:#0b0c10;color:#e5e7eb;font-family:system-ui}
   [v-cloak]{display:none}
   .card{background:#111318;border:1px solid #1e2229;border-radius:12px;padding:12px}
-  .btn{background:#c5a059;color:#0b0c10;font-weight:700;padding:10px;border-radius:8px}
-  input{background:#0b0c10;border:1px solid #1e2229;color:white;padding:6px;border-radius:6px;width:100%}
+  .btn{background:#c5a059;color:#0b0c10;font-weight:700;padding:8px 12px;border-radius:8px;cursor:pointer}
+  input, select{background:#0b0c10;border:1px solid #1e2229;color:white;padding:6px;border-radius:6px;width:100%}
+  .badge{background:#1e2229;padding:2px 6px;border-radius:20px;font-size:11px}
+  .calendar-day{width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:8px;cursor:pointer}
+  .calendar-day:hover{background:#2a2f3a}
+  .has-record{background:#c5a05920;border:1px solid #c5a059}
 </style>
 </head>
 
 <body>
 <div id="app" v-cloak>
 
-<header style="padding:12px;border-bottom:1px solid #1e2229">
-  <b>TiDyn MATRIX ENGINE v2</b>
+<header style="padding:12px;border-bottom:1px solid #1e2229" class="flex justify-between items-center">
+  <div><b>TiDyn MATRIX ENGINE v2</b> <span class="badge">+ tracker</span></div>
+  <div class="text-sm">Bankroll: <b>${{ fmt(currentBankroll) }}</b></div>
 </header>
 
 <main style="max-width:1100px;margin:auto;padding:14px">
 
-<!-- INPUT -->
-<div class="card" style="margin-bottom:12px">
-  <div style="font-size:12px;color:#aaa;margin-bottom:8px">
-    Enter BTTS No Odds (4 Matches)
-  </div>
-
-  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
-    <input v-for="(m,i) in state.matches" :key="i"
-      v-model.number="state.matches[i].odds"
-      placeholder="Odds"/>
-  </div>
-</div>
-
-<button class="btn" @click="generate">
-  Generate 6 Matrices
-</button>
-
-<!-- MATRICES -->
-<div v-if="matrices.length" style="margin-top:14px;display:grid;gap:10px">
-
-  <div v-for="(m,i) in matrices" :key="i" class="card">
-
-    <div style="display:flex;justify-content:space-between">
-      <b>Matrix {{ i+1 }}</b>
-      <span style="color:#c5a059">Parlay: {{ m.parlay.toFixed(2) }}x</span>
+  <!-- Strategy Input Section -->
+  <div class="card" style="margin-bottom:12px">
+    <div class="flex gap-4 items-end flex-wrap">
+      <div><div class="text-xs text-gray-400">Bankroll (initial)</div>
+      <input type="number" v-model.number="state.bankroll" step="100" style="width:150px"/></div>
+      <div><div class="text-xs text-gray-400">Per matrix stake (2.78%)</div>
+      <div class="font-mono">${{ fmt(matrixStake) }}</div></div>
+      <button class="btn" @click="resetBankroll">Reset Bankroll</button>
     </div>
+  </div>
 
-    <div style="margin-top:10px;font-size:12px">
+  <!-- Odds Input -->
+  <div class="card" style="margin-bottom:12px">
+    <div class="grid grid-cols-4 gap-3 text-xs font-bold mb-2">
+      <div>Match</div><div>BTTS Yes (live)</div><div>BTTS No (pre)</div><div></div>
+    </div>
+    <div v-for="(m,idx) in state.matches" :key="idx" class="grid grid-cols-4 gap-3 mb-2 items-center">
+      <div>{{ m.name }}</div>
+      <input type="number" v-model.number="m.yesOdds" step="0.01" placeholder="Yes odds"/>
+      <input type="number" v-model.number="m.noOdds" step="0.01" placeholder="No odds"/>
+      <div class="text-xs text-gray-400">{{ m.noOdds ? (1/m.noOdds*100).toFixed(1) : '' }}%</div>
+    </div>
+    <button class="btn mt-2" @click="generate">Generate 6 Matrices</button>
+  </div>
 
-      <div v-for="s in m.slips" :key="s.label"
-        style="display:flex;justify-content:space-between;margin:4px 0">
-
-        <span>{{ s.label }}</span>
-        <b>${{ fmt(s.stake) }}</b>
-
+  <!-- Matrices Output -->
+  <div v-if="matrices.length" style="margin-top:14px;display:grid;gap:10px">
+    <div v-for="(m,idx) in matrices" :key="idx" class="card">
+      <div class="flex justify-between items-center">
+        <b>Matrix {{ idx+1 }} : {{ m.pair[0].name }} – {{ m.pair[1].name }}</b>
+        <span class="text-amber-400 text-sm">No/No parlay: {{ m.parlayOdds.toFixed(2) }}x</span>
       </div>
+      <div class="mt-2 text-sm grid grid-cols-2 gap-x-4 gap-y-1">
+        <div class="flex justify-between"><span>YES {{ m.pair[0].name }}</span> <b>${{ fmt(m.stakes.yes1) }}</b></div>
+        <div class="flex justify-between"><span>YES {{ m.pair[1].name }}</span> <b>${{ fmt(m.stakes.yes2) }}</b></div>
+        <div class="flex justify-between"><span>NO {{ m.pair[0].name }}</span> <b>${{ fmt(m.stakes.no1) }}</b></div>
+        <div class="flex justify-between"><span>NO {{ m.pair[1].name }}</span> <b>${{ fmt(m.stakes.no2) }}</b></div>
+        <div class="flex justify-between col-span-2"><span>Parlay NO/NO</span> <b>${{ fmt(m.stakes.parlay) }}</b></div>
+      </div>
+      <div class="text-[11px] text-gray-400 mt-2 border-t border-gray-700 pt-1 flex gap-3">
+        <span>Y/Y: -30%</span> <span>Y/N: -30%</span> <span>N/Y: -30%</span> <span class="text-green-400">N/N: +225%</span>
+      </div>
+    </div>
+  </div>
 
+  <!-- CALENDAR & TRACKER SECTION -->
+  <div v-if="matrices.length" class="card mt-6">
+    <div class="flex justify-between items-center mb-3">
+      <b>📅 Round Tracker</b>
+      <div class="flex gap-2">
+        <button class="btn text-xs py-1" @click="prevMonth">◀ {{ monthNames[currentMonth-1] || '' }}</button>
+        <span class="font-mono">{{ monthNames[currentMonth] }} {{ currentYear }}</span>
+        <button class="btn text-xs py-1" @click="nextMonth">{{ monthNames[currentMonth+1] || '' }} ▶</button>
+      </div>
     </div>
 
+    <!-- Calendar Grid -->
+    <div class="grid grid-cols-7 gap-1 text-center text-xs text-gray-400 mb-2">
+      <div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div>
+    </div>
+    <div class="grid grid-cols-7 gap-1">
+      <div v-for="day in calendarDays" :key="day.dateStr"
+           class="calendar-day" :class="{'has-record': day.hasRecord}"
+           @click="selectDate(day.dateStr, day.date)">
+        <span>{{ day.dayNum }}</span>
+      </div>
+    </div>
+
+    <!-- Record Form (shows when a date is selected) -->
+    <div v-if="selectedDateStr" class="mt-4 p-2 border-t border-gray-700">
+      <div class="font-bold">{{ selectedDateStr }}</div>
+      <div class="flex gap-4 mt-2 items-end">
+        <div><div class="text-xs">BTTS No matches (0-4)</div>
+        <input type="number" v-model.number="recordForm.noCount" min="0" max="4" step="1" style="width:80px"/></div>
+        <div><div class="text-xs">Actual Net P/L (USD)</div>
+        <input type="number" v-model.number="recordForm.netUSD" step="1" style="width:120px"/></div>
+        <button class="btn py-1" @click="saveRecord">Save</button>
+        <button class="btn py-1 bg-gray-700" @click="clearRecord">Delete</button>
+      </div>
+    </div>
   </div>
 
-</div>
-
-<!-- SUMMARY -->
-<div v-if="matrices.length" class="card" style="margin-top:14px">
-
-  <b>Round Summary</b>
-
-  <div style="margin-top:10px;font-size:12px">
-
-    <div>Total Matrices: {{ matrices.length }}</div>
-    <div>Total Stake: ${{ fmt(totalStake) }}</div>
-    <div>Per Matrix Stake: ${{ fmt(matrixStake) }}</div>
-
+  <!-- History & Stats -->
+  <div v-if="Object.keys(records).length" class="card mt-4">
+    <b>📊 Performance</b>
+    <div class="grid grid-cols-2 gap-3 mt-2 text-sm">
+      <div>Total rounds: {{ totalRounds }}</div>
+      <div>Net profit (total): ${{ fmt(totalNetProfit) }}</div>
+      <div>Avg profit/round: ${{ fmt(avgProfit) }}</div>
+      <div>Best day: ${{ fmt(bestDayProfit) }}</div>
+      <div>Worst day: ${{ fmt(worstDayProfit) }}</div>
+      <div>Current bankroll: ${{ fmt(currentBankroll) }}</div>
+    </div>
+    <div class="mt-3 max-h-40 overflow-y-auto text-xs">
+      <div v-for="(rec, date) in sortedRecords" :key="date" class="flex justify-between border-b border-gray-700 py-1">
+        <span>{{ date }}</span>
+        <span>{{ rec.noCount }} No's → ${{ fmt(rec.netUSD) }}</span>
+      </div>
+    </div>
   </div>
-
-</div>
 
 </main>
 </div>
 
 <script>
-const { createApp, reactive, ref, computed } = Vue;
+const { createApp, reactive, ref, computed, onMounted, watch } = Vue;
 
 createApp({
-
-setup() {
-
-  // =====================
-  // STATE
-  // =====================
-  const state = reactive({
-    bankroll: 1000,
-    matches: [
-      { name: "A", odds: 2.0 },
-      { name: "B", odds: 2.1 },
-      { name: "C", odds: 2.3 },
-      { name: "D", odds: 2.4 }
-    ]
-  });
-
-  const matrices = ref([]);
-
-  // =====================
-  // ENGINE SETTINGS
-  // =====================
-  const matrixStake = computed(() => state.bankroll * 0.0278);
-
-  // =====================
-  // MATRIX ENGINE
-  // =====================
-  function generatePairs(arr) {
-    const pairs = [];
-    for (let i = 0; i < arr.length; i++) {
-      for (let j = i + 1; j < arr.length; j++) {
-        pairs.push([arr[i], arr[j]]);
-      }
-    }
-    return pairs;
-  }
-
-  function generate() {
-
-    const pairs = generatePairs(state.matches);
-
-    matrices.value = pairs.map((p) => {
-
-      const a = p[0];
-      const b = p[1];
-
-      const parlay = a.odds * b.odds;
-
-      // =====================
-      // CORE SLIP STRUCTURE
-      // (PLACEHOLDER FOR YOUR LINEAR SOLVER)
-      // =====================
-      const slips = [
-        {
-          label: `YES ${a.name}`,
-          stake: matrixStake.value * 0.8
-        },
-        {
-          label: `YES ${b.name}`,
-          stake: matrixStake.value * 0.8
-        },
-        {
-          label: `NO ${a.name}`,
-          stake: matrixStake.value * 1.2
-        },
-        {
-          label: `NO ${b.name}`,
-          stake: matrixStake.value * 1.2
-        },
-        {
-          label: `PARLAY NO/NO`,
-          stake: matrixStake.value * 0.6
-        }
-      ];
-
-      return { parlay, slips };
-
+  setup() {
+    const state = reactive({
+      bankroll: 20000,   // initial bankroll (starting point)
+      matches: [
+        { name: "A", yesOdds: 2.25, noOdds: 2.596 },
+        { name: "B", yesOdds: 2.25, noOdds: 2.265 },
+        { name: "C", yesOdds: 2.25, noOdds: 2.596 },
+        { name: "D", yesOdds: 2.25, noOdds: 2.265 }
+      ]
     });
 
+    const matrices = ref([]);
+    const records = ref({});   // key: YYYY-MM-DD, value: {noCount, netUSD}
+    const selectedDateStr = ref(null);
+    const recordForm = reactive({ noCount: 2, netUSD: 0 });
+
+    // Calendar state
+    const currentYear = ref(new Date().getFullYear());
+    const currentMonth = ref(new Date().getMonth()); // 0-indexed
+    const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+    // Helper: format number
+    const fmt = (n) => n.toFixed(2);
+
+    // Per matrix stake (2.78% of initial bankroll? Actually should be based on current bankroll? 
+    // For stake calculation we use current bankroll (or user's entered initial). We'll use state.bankroll as the working bankroll.
+    const matrixStake = computed(() => state.bankroll * 0.0278);
+
+    // Generate matrix pairs and stakes using the solver
+    function generatePairs() {
+      const pairs = [];
+      for (let i = 0; i < state.matches.length; i++) {
+        for (let j = i+1; j < state.matches.length; j++) {
+          pairs.push([state.matches[i], state.matches[j]]);
+        }
+      }
+      return pairs;
+    }
+
+    function solveMatrix(mA, mB, S) {
+      const Y1 = mA.yesOdds - 1;
+      const Y2 = mB.yesOdds - 1;
+      const N1 = mA.noOdds - 1;
+      const N2 = mB.noOdds - 1;
+      const L = 0.3 * S;
+      const denom = mA.yesOdds + mB.yesOdds;
+      let a = (0.7 * S) / denom;
+      let b = a;
+      let c = a * (mA.yesOdds / mA.noOdds);
+      let d = b * (mB.yesOdds / mB.noOdds);
+      let e = a*Y1 + b*Y2 + L - c - d;
+      if (e < 0) e = 0;
+      return { yes1: a, yes2: b, no1: c, no2: d, parlay: e, total: a+b+c+d+e };
+    }
+
+    function generate() {
+      const pairs = generatePairs();
+      const S = matrixStake.value;
+      const newMatrices = [];
+      for (let [mA, mB] of pairs) {
+        const stakes = solveMatrix(mA, mB, S);
+        const parlayOdds = mA.noOdds * mB.noOdds;
+        newMatrices.push({ pair: [mA, mB], parlayOdds, stakes });
+      }
+      matrices.value = newMatrices;
+    }
+
+    // Load records from localStorage
+    function loadRecords() {
+      const stored = localStorage.getItem("TiDynRecords");
+      if (stored) records.value = JSON.parse(stored);
+    }
+    function saveRecords() {
+      localStorage.setItem("TiDynRecords", JSON.stringify(records.value));
+    }
+
+    // Update bankroll based on records (starting from state.bankroll initial, then add net sums)
+    const currentBankroll = computed(() => {
+      let sum = state.bankroll;
+      for (let key in records.value) {
+        sum += records.value[key].netUSD;
+      }
+      return sum;
+    });
+
+    // Statistics
+    const totalRounds = computed(() => Object.keys(records.value).length);
+    const totalNetProfit = computed(() => {
+      let sum = 0;
+      for (let key in records.value) sum += records.value[key].netUSD;
+      return sum;
+    });
+    const avgProfit = computed(() => totalRounds.value ? totalNetProfit.value / totalRounds.value : 0);
+    const bestDayProfit = computed(() => {
+      let best = -Infinity;
+      for (let key in records.value) best = Math.max(best, records.value[key].netUSD);
+      return best === -Infinity ? 0 : best;
+    });
+    const worstDayProfit = computed(() => {
+      let worst = Infinity;
+      for (let key in records.value) worst = Math.min(worst, records.value[key].netUSD);
+      return worst === Infinity ? 0 : worst;
+    });
+
+    const sortedRecords = computed(() => {
+      return Object.entries(records.value).sort((a,b) => new Date(b[0]) - new Date(a[0]));
+    });
+
+    // Calendar helpers
+    function getDaysInMonth(year, month) {
+      return new Date(year, month+1, 0).getDate();
+    }
+    function getFirstDayOfMonth(year, month) {
+      return new Date(year, month, 1).getDay(); // 0 = Sunday, but we want Monday first
+    }
+    const calendarDays = computed(() => {
+      const year = currentYear.value;
+      const month = currentMonth.value;
+      const daysInMonth = getDaysInMonth(year, month);
+      const firstDayIdx = getFirstDayOfMonth(year, month);
+      // Adjust to Monday first (if Sunday = 0, shift so Monday=0)
+      let startOffset = (firstDayIdx === 0 ? 6 : firstDayIdx - 1);
+      const days = [];
+      for (let i = 0; i < startOffset; i++) days.push({ dayNum: '', dateStr: null, hasRecord: false });
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        days.push({ dayNum: d, dateStr, hasRecord: !!records.value[dateStr] });
+      }
+      return days;
+    });
+
+    function selectDate(dateStr, dateObj) {
+      selectedDateStr.value = dateStr;
+      const rec = records.value[dateStr];
+      if (rec) {
+        recordForm.noCount = rec.noCount;
+        recordForm.netUSD = rec.netUSD;
+      } else {
+        recordForm.noCount = 2;
+        recordForm.netUSD = 0;
+      }
+    }
+
+    function saveRecord() {
+      if (!selectedDateStr.value) return;
+      records.value[selectedDateStr.value] = {
+        noCount: recordForm.noCount,
+        netUSD: recordForm.netUSD
+      };
+      saveRecords();
+      selectedDateStr.value = null;
+    }
+
+    function clearRecord() {
+      if (!selectedDateStr.value) return;
+      delete records.value[selectedDateStr.value];
+      saveRecords();
+      selectedDateStr.value = null;
+    }
+
+    function prevMonth() {
+      if (currentMonth.value === 0) {
+        currentMonth.value = 11;
+        currentYear.value--;
+      } else {
+        currentMonth.value--;
+      }
+    }
+    function nextMonth() {
+      if (currentMonth.value === 11) {
+        currentMonth.value = 0;
+        currentYear.value++;
+      } else {
+        currentMonth.value++;
+      }
+    }
+
+    function resetBankroll() {
+      // reset all records and set bankroll to initial value
+      records.value = {};
+      saveRecords();
+      state.bankroll = state.bankroll; // keep same input (user can change number)
+    }
+
+    onMounted(() => {
+      loadRecords();
+      generate(); // initial matrix generation
+    });
+
+    // Watch bankroll changes to update stakes without regenerating? Not needed, user can click generate again.
+    return {
+      state,
+      matrices,
+      records,
+      selectedDateStr,
+      recordForm,
+      currentYear,
+      currentMonth,
+      monthNames,
+      calendarDays,
+      matrixStake,
+      currentBankroll,
+      totalRounds,
+      totalNetProfit,
+      avgProfit,
+      bestDayProfit,
+      worstDayProfit,
+      sortedRecords,
+      fmt,
+      generate,
+      selectDate,
+      saveRecord,
+      clearRecord,
+      prevMonth,
+      nextMonth,
+      resetBankroll
+    };
   }
-
-  // =====================
-  // SUMMARY
-  // =====================
-  const totalStake = computed(() =>
-    matrices.value.reduce((sum, m) =>
-      sum + m.slips.reduce((s, x) => s + x.stake, 0), 0
-    )
-  );
-
-  function fmt(n){ return Number(n).toFixed(2); }
-
-  return {
-    state,
-    matrices,
-    generate,
-    matrixStake,
-    totalStake,
-    fmt
-  };
-
-}
-
 }).mount("#app");
 </script>
-
 </body>
-</html>
+  </html>
