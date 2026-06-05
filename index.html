@@ -2,144 +2,238 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>TiDyn Matrix Engine v2 – Tracker</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>TiDyn Matrix Engine | Dashboard + Tracker</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 <style>
-  body{background:#0b0c10;color:#e5e7eb;font-family:system-ui}
-  [v-cloak]{display:none}
-  .card{background:#111318;border:1px solid #1e2229;border-radius:12px;padding:12px}
-  .btn{background:#c5a059;color:#0b0c10;font-weight:700;padding:8px 12px;border-radius:8px;cursor:pointer}
-  input, select{background:#0b0c10;border:1px solid #1e2229;color:white;padding:6px;border-radius:6px;width:100%}
-  .badge{background:#1e2229;padding:2px 6px;border-radius:20px;font-size:11px}
-  .calendar-day{width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:8px;cursor:pointer}
-  .calendar-day:hover{background:#2a2f3a}
-  .has-record{background:#c5a05920;border:1px solid #c5a059}
+  body {
+    background: #03050A;
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  }
+  [v-cloak] { display: none; }
+  .card {
+    background: #0E121B;
+    border: 1px solid #1E2530;
+    border-radius: 24px;
+    padding: 1rem;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+    transition: all 0.1s ease;
+  }
+  .btn-gold {
+    background: linear-gradient(135deg, #D4AF37 0%, #AA7C11 100%);
+    color: #0B0E14;
+    font-weight: 700;
+    padding: 8px 20px;
+    border-radius: 40px;
+    transition: 0.2s;
+    cursor: pointer;
+    border: none;
+    font-size: 0.85rem;
+  }
+  .btn-gold:hover {
+    transform: scale(1.01);
+    filter: brightness(1.05);
+  }
+  .btn-secondary {
+    background: #1E293B;
+    color: #CBD5E1;
+    padding: 6px 14px;
+    border-radius: 30px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: 0.2s;
+  }
+  .btn-secondary:hover {
+    background: #2D3A4F;
+  }
+  input, select {
+    background: #0F121B;
+    border: 1px solid #2A3342;
+    border-radius: 12px;
+    padding: 8px 12px;
+    color: #F1F5F9;
+    font-size: 0.85rem;
+    width: 100%;
+  }
+  input:focus {
+    outline: none;
+    border-color: #D4AF37;
+    box-shadow: 0 0 0 2px rgba(212,175,55,0.2);
+  }
+  .calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+  }
+  .calendar-day {
+    background: #0F121B;
+    border-radius: 12px;
+    padding: 8px 4px;
+    text-align: center;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: 0.1s;
+    border: 1px solid #1E293B;
+  }
+  .calendar-day:hover {
+    background: #1E2A3A;
+    border-color: #D4AF37;
+  }
+  .has-record {
+    background: #2A2A1C;
+    border-color: #D4AF37;
+    color: #FFE8A3;
+    font-weight: bold;
+  }
+  .stat-card {
+    background: #0A0E16;
+    border-radius: 20px;
+    padding: 12px;
+    text-align: center;
+    border: 1px solid #202837;
+  }
+  hr {
+    border-color: #1E293B;
+  }
+  .badge-gold {
+    background: #D4AF37;
+    color: #0B0E14;
+    padding: 2px 8px;
+    border-radius: 40px;
+    font-size: 0.7rem;
+    font-weight: bold;
+  }
 </style>
 </head>
-
-<body>
+<body class="text-gray-200">
 <div id="app" v-cloak>
 
-<header style="padding:12px;border-bottom:1px solid #1e2229" class="flex justify-between items-center">
-  <div><b>TiDyn MATRIX ENGINE v2</b> <span class="badge">+ tracker</span></div>
-  <div class="text-sm">Bankroll: <b>${{ fmt(currentBankroll) }}</b></div>
-</header>
-
-<main style="max-width:1100px;margin:auto;padding:14px">
-
-  <!-- Strategy Input Section -->
-  <div class="card" style="margin-bottom:12px">
-    <div class="flex gap-4 items-end flex-wrap">
-      <div><div class="text-xs text-gray-400">Bankroll (initial)</div>
-      <input type="number" v-model.number="state.bankroll" step="100" style="width:150px"/></div>
-      <div><div class="text-xs text-gray-400">Per matrix stake (2.78%)</div>
-      <div class="font-mono">${{ fmt(matrixStake) }}</div></div>
-      <button class="btn" @click="resetBankroll">Reset Bankroll</button>
+  <!-- Header -->
+  <div class="max-w-7xl mx-auto px-4 py-4 flex flex-wrap justify-between items-center border-b border-gray-800 mb-5">
+    <div class="flex items-center gap-3">
+      <div class="text-2xl font-black tracking-tight bg-gradient-to-r from-amber-400 to-yellow-600 bg-clip-text text-transparent">TiDyn</div>
+      <div class="badge-gold">MATRIX v2.5</div>
+    </div>
+    <div class="flex gap-4 items-center text-sm">
+      <div>💼 Bankroll: <span class="font-mono text-amber-400 font-bold">${{ fmt(currentBankroll) }}</span></div>
+      <button class="btn-secondary" @click="resetBankroll">⟳ Reset bankroll</button>
     </div>
   </div>
 
-  <!-- Odds Input -->
-  <div class="card" style="margin-bottom:12px">
-    <div class="grid grid-cols-4 gap-3 text-xs font-bold mb-2">
-      <div>Match</div><div>BTTS Yes (live)</div><div>BTTS No (pre)</div><div></div>
+  <div class="max-w-7xl mx-auto px-4 pb-12">
+
+    <!-- Dashboard quick stats -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+      <div class="stat-card"><div class="text-xs text-gray-400">Total rounds</div><div class="text-xl font-bold">{{ totalRounds }}</div></div>
+      <div class="stat-card"><div class="text-xs text-gray-400">Net profit</div><div class="text-xl font-bold" :class="totalNetProfit>=0?'text-green-400':'text-red-400'">${{ fmt(totalNetProfit) }}</div></div>
+      <div class="stat-card"><div class="text-xs text-gray-400">Avg / round</div><div class="text-xl font-bold" :class="avgProfit>=0?'text-green-400':'text-red-400'">${{ fmt(avgProfit) }}</div></div>
+      <div class="stat-card"><div class="text-xs text-gray-400">Best / worst</div><div class="text-md font-bold">${{ fmt(bestDayProfit) }} / ${{ fmt(worstDayProfit) }}</div></div>
     </div>
-    <div v-for="(m,idx) in state.matches" :key="idx" class="grid grid-cols-4 gap-3 mb-2 items-center">
-      <div>{{ m.name }}</div>
-      <input type="number" v-model.number="m.yesOdds" step="0.01" placeholder="Yes odds"/>
-      <input type="number" v-model.number="m.noOdds" step="0.01" placeholder="No odds"/>
-      <div class="text-xs text-gray-400">{{ m.noOdds ? (1/m.noOdds*100).toFixed(1) : '' }}%</div>
+
+    <!-- Strategy config + matrix generator -->
+    <div class="card mb-6">
+      <div class="flex flex-wrap gap-5 items-end">
+        <div class="flex-1 min-w-[140px]">
+          <div class="text-xs text-gray-400 mb-1">Base bankroll (USD)</div>
+          <input type="number" v-model.number="state.bankroll" step="100" class="w-full" />
+        </div>
+        <div class="flex-1 min-w-[140px]">
+          <div class="text-xs text-gray-400 mb-1">Per matrix stake (2.78%)</div>
+          <div class="font-mono bg-black/40 px-3 py-2 rounded-xl text-amber-300">${{ fmt(matrixStake) }}</div>
+        </div>
+        <div><button class="btn-gold" @click="generate">⟳ Generate 6 matrices</button></div>
+      </div>
     </div>
-    <button class="btn mt-2" @click="generate">Generate 6 Matrices</button>
+
+    <!-- Odds inputs -->
+    <div class="card mb-6">
+      <div class="text-sm font-semibold mb-3">⚡ MATCH ODDS (BTTS Yes live / BTTS No pre-match)</div>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div v-for="(m,idx) in state.matches" :key="idx" class="border border-gray-800 rounded-xl p-2">
+          <div class="font-bold text-amber-400 mb-1">{{ m.name }}</div>
+          <div class="text-xs">Yes (live) <input type="number" step="0.01" v-model.number="m.yesOdds" class="mt-1"/></div>
+          <div class="text-xs mt-2">No (pre) <input type="number" step="0.01" v-model.number="m.noOdds" class="mt-1"/></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6 matrices display -->
+    <div v-if="matrices.length" class="grid md:grid-cols-2 lg:grid-cols-3 gap-5 mb-8">
+      <div v-for="(m,idx) in matrices" :key="idx" class="card border-l-4 border-l-amber-600">
+        <div class="flex justify-between items-start">
+          <div class="font-bold text-lg">{{ m.pair[0].name }} – {{ m.pair[1].name }}</div>
+          <div class="text-xs bg-gray-800 px-2 py-1 rounded-full">No/No parlay: {{ m.parlayOdds.toFixed(2) }}x</div>
+        </div>
+        <hr class="my-2" />
+        <div class="grid grid-cols-2 gap-2 text-sm">
+          <div class="flex justify-between"><span>✅ YES {{ m.pair[0].name }}</span> <span class="font-mono">${{ fmt(m.stakes.yes1) }}</span></div>
+          <div class="flex justify-between"><span>✅ YES {{ m.pair[1].name }}</span> <span class="font-mono">${{ fmt(m.stakes.yes2) }}</span></div>
+          <div class="flex justify-between"><span>❌ NO {{ m.pair[0].name }}</span> <span class="font-mono">${{ fmt(m.stakes.no1) }}</span></div>
+          <div class="flex justify-between"><span>❌ NO {{ m.pair[1].name }}</span> <span class="font-mono">${{ fmt(m.stakes.no2) }}</span></div>
+          <div class="col-span-2 flex justify-between mt-1 pt-1 border-t border-gray-700"><span>🎲 PARLAY NO/NO</span> <span class="font-mono text-amber-300">${{ fmt(m.stakes.parlay) }}</span></div>
+        </div>
+        <div class="text-[10px] text-gray-500 mt-2 flex gap-3">
+          <span>Y/Y: -30%</span> <span>Y/N: -30%</span> <span>N/Y: -30%</span> <span class="text-green-400">N/N: +225%</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tracker (calendar + history) -->
+    <div v-if="matrices.length" class="card">
+      <div class="flex flex-wrap justify-between items-center mb-4">
+        <h3 class="text-lg font-bold flex gap-2"><span>📆</span> Round Tracker</h3>
+        <div class="flex gap-2">
+          <button class="btn-secondary" @click="prevMonth">◀ {{ monthNames[currentMonth-1] || '' }}</button>
+          <span class="px-3 py-1 bg-gray-800 rounded-full text-sm">{{ monthNames[currentMonth] }} {{ currentYear }}</span>
+          <button class="btn-secondary" @click="nextMonth">{{ monthNames[currentMonth+1] || '' }} ▶</button>
+        </div>
+      </div>
+
+      <!-- calendar grid -->
+      <div class="calendar-grid">
+        <div v-for="dayName in ['M','T','W','T','F','S','S']" :key="dayName" class="text-center text-xs text-gray-500">{{ dayName }}</div>
+        <div v-for="day in calendarDays" :key="day.dateStr" class="calendar-day" :class="{'has-record': day.hasRecord}" @click="selectDate(day.dateStr, day)">
+          <span v-if="day.dayNum">{{ day.dayNum }}</span>
+          <span v-else></span>
+        </div>
+      </div>
+
+      <!-- selected date record -->
+      <div v-if="selectedDateStr" class="mt-5 p-3 bg-black/30 rounded-2xl">
+        <div class="font-bold text-amber-300">{{ selectedDateStr }}</div>
+        <div class="flex flex-wrap gap-4 items-end mt-2">
+          <div><div class="text-xs text-gray-400">BTTS No count (0-4)</div><input type="number" v-model.number="recordForm.noCount" min="0" max="4" class="w-24" /></div>
+          <div><div class="text-xs text-gray-400">Net P/L (USD)</div><input type="number" v-model.number="recordForm.netUSD" class="w-32" /></div>
+          <button class="btn-gold py-1 px-4" @click="saveRecord">✓ Save</button>
+          <button class="btn-secondary py-1 px-4" @click="clearRecord">✗ Delete</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- history table -->
+    <div v-if="Object.keys(records).length" class="card mt-6">
+      <div class="font-bold mb-2">📋 Recent rounds</div>
+      <div class="overflow-x-auto max-h-52 text-sm">
+        <div v-for="(rec, date) in sortedRecords" :key="date" class="flex justify-between border-b border-gray-800 py-2 px-1 hover:bg-gray-900/30">
+          <span class="font-mono">{{ date }}</span>
+          <span>{{ rec.noCount }} No’s → </span>
+          <span :class="rec.netUSD>=0?'text-green-400':'text-red-400'">${{ fmt(rec.netUSD) }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="text-center text-gray-500 text-xs mt-8">TiDyn Matrix Engine – pre‑match + live hedge (2.25 Yes trigger) | Bankroll: 2.78% per matrix, max round loss 5%</div>
   </div>
-
-  <!-- Matrices Output -->
-  <div v-if="matrices.length" style="margin-top:14px;display:grid;gap:10px">
-    <div v-for="(m,idx) in matrices" :key="idx" class="card">
-      <div class="flex justify-between items-center">
-        <b>Matrix {{ idx+1 }} : {{ m.pair[0].name }} – {{ m.pair[1].name }}</b>
-        <span class="text-amber-400 text-sm">No/No parlay: {{ m.parlayOdds.toFixed(2) }}x</span>
-      </div>
-      <div class="mt-2 text-sm grid grid-cols-2 gap-x-4 gap-y-1">
-        <div class="flex justify-between"><span>YES {{ m.pair[0].name }}</span> <b>${{ fmt(m.stakes.yes1) }}</b></div>
-        <div class="flex justify-between"><span>YES {{ m.pair[1].name }}</span> <b>${{ fmt(m.stakes.yes2) }}</b></div>
-        <div class="flex justify-between"><span>NO {{ m.pair[0].name }}</span> <b>${{ fmt(m.stakes.no1) }}</b></div>
-        <div class="flex justify-between"><span>NO {{ m.pair[1].name }}</span> <b>${{ fmt(m.stakes.no2) }}</b></div>
-        <div class="flex justify-between col-span-2"><span>Parlay NO/NO</span> <b>${{ fmt(m.stakes.parlay) }}</b></div>
-      </div>
-      <div class="text-[11px] text-gray-400 mt-2 border-t border-gray-700 pt-1 flex gap-3">
-        <span>Y/Y: -30%</span> <span>Y/N: -30%</span> <span>N/Y: -30%</span> <span class="text-green-400">N/N: +225%</span>
-      </div>
-    </div>
-  </div>
-
-  <!-- CALENDAR & TRACKER SECTION -->
-  <div v-if="matrices.length" class="card mt-6">
-    <div class="flex justify-between items-center mb-3">
-      <b>📅 Round Tracker</b>
-      <div class="flex gap-2">
-        <button class="btn text-xs py-1" @click="prevMonth">◀ {{ monthNames[currentMonth-1] || '' }}</button>
-        <span class="font-mono">{{ monthNames[currentMonth] }} {{ currentYear }}</span>
-        <button class="btn text-xs py-1" @click="nextMonth">{{ monthNames[currentMonth+1] || '' }} ▶</button>
-      </div>
-    </div>
-
-    <!-- Calendar Grid -->
-    <div class="grid grid-cols-7 gap-1 text-center text-xs text-gray-400 mb-2">
-      <div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div>
-    </div>
-    <div class="grid grid-cols-7 gap-1">
-      <div v-for="day in calendarDays" :key="day.dateStr"
-           class="calendar-day" :class="{'has-record': day.hasRecord}"
-           @click="selectDate(day.dateStr, day.date)">
-        <span>{{ day.dayNum }}</span>
-      </div>
-    </div>
-
-    <!-- Record Form (shows when a date is selected) -->
-    <div v-if="selectedDateStr" class="mt-4 p-2 border-t border-gray-700">
-      <div class="font-bold">{{ selectedDateStr }}</div>
-      <div class="flex gap-4 mt-2 items-end">
-        <div><div class="text-xs">BTTS No matches (0-4)</div>
-        <input type="number" v-model.number="recordForm.noCount" min="0" max="4" step="1" style="width:80px"/></div>
-        <div><div class="text-xs">Actual Net P/L (USD)</div>
-        <input type="number" v-model.number="recordForm.netUSD" step="1" style="width:120px"/></div>
-        <button class="btn py-1" @click="saveRecord">Save</button>
-        <button class="btn py-1 bg-gray-700" @click="clearRecord">Delete</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- History & Stats -->
-  <div v-if="Object.keys(records).length" class="card mt-4">
-    <b>📊 Performance</b>
-    <div class="grid grid-cols-2 gap-3 mt-2 text-sm">
-      <div>Total rounds: {{ totalRounds }}</div>
-      <div>Net profit (total): ${{ fmt(totalNetProfit) }}</div>
-      <div>Avg profit/round: ${{ fmt(avgProfit) }}</div>
-      <div>Best day: ${{ fmt(bestDayProfit) }}</div>
-      <div>Worst day: ${{ fmt(worstDayProfit) }}</div>
-      <div>Current bankroll: ${{ fmt(currentBankroll) }}</div>
-    </div>
-    <div class="mt-3 max-h-40 overflow-y-auto text-xs">
-      <div v-for="(rec, date) in sortedRecords" :key="date" class="flex justify-between border-b border-gray-700 py-1">
-        <span>{{ date }}</span>
-        <span>{{ rec.noCount }} No's → ${{ fmt(rec.netUSD) }}</span>
-      </div>
-    </div>
-  </div>
-
-</main>
 </div>
 
 <script>
-const { createApp, reactive, ref, computed, onMounted, watch } = Vue;
+const { createApp, reactive, ref, computed, onMounted } = Vue;
 
 createApp({
   setup() {
     const state = reactive({
-      bankroll: 20000,   // initial bankroll (starting point)
+      bankroll: 20000,
       matches: [
         { name: "A", yesOdds: 2.25, noOdds: 2.596 },
         { name: "B", yesOdds: 2.25, noOdds: 2.265 },
@@ -149,25 +243,19 @@ createApp({
     });
 
     const matrices = ref([]);
-    const records = ref({});   // key: YYYY-MM-DD, value: {noCount, netUSD}
+    const records = ref({});
     const selectedDateStr = ref(null);
     const recordForm = reactive({ noCount: 2, netUSD: 0 });
 
-    // Calendar state
     const currentYear = ref(new Date().getFullYear());
-    const currentMonth = ref(new Date().getMonth()); // 0-indexed
-    const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    const currentMonth = ref(new Date().getMonth());
+    const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 
-    // Helper: format number
     const fmt = (n) => n.toFixed(2);
-
-    // Per matrix stake (2.78% of initial bankroll? Actually should be based on current bankroll? 
-    // For stake calculation we use current bankroll (or user's entered initial). We'll use state.bankroll as the working bankroll.
     const matrixStake = computed(() => state.bankroll * 0.0278);
 
-    // Generate matrix pairs and stakes using the solver
     function generatePairs() {
-      const pairs = [];
+      let pairs = [];
       for (let i = 0; i < state.matches.length; i++) {
         for (let j = i+1; j < state.matches.length; j++) {
           pairs.push([state.matches[i], state.matches[j]]);
@@ -204,7 +292,6 @@ createApp({
       matrices.value = newMatrices;
     }
 
-    // Load records from localStorage
     function loadRecords() {
       const stored = localStorage.getItem("TiDynRecords");
       if (stored) records.value = JSON.parse(stored);
@@ -213,146 +300,90 @@ createApp({
       localStorage.setItem("TiDynRecords", JSON.stringify(records.value));
     }
 
-    // Update bankroll based on records (starting from state.bankroll initial, then add net sums)
     const currentBankroll = computed(() => {
       let sum = state.bankroll;
-      for (let key in records.value) {
-        sum += records.value[key].netUSD;
-      }
+      for (let k in records.value) sum += records.value[k].netUSD;
       return sum;
     });
-
-    // Statistics
     const totalRounds = computed(() => Object.keys(records.value).length);
     const totalNetProfit = computed(() => {
       let sum = 0;
-      for (let key in records.value) sum += records.value[key].netUSD;
+      for (let k in records.value) sum += records.value[k].netUSD;
       return sum;
     });
     const avgProfit = computed(() => totalRounds.value ? totalNetProfit.value / totalRounds.value : 0);
     const bestDayProfit = computed(() => {
       let best = -Infinity;
-      for (let key in records.value) best = Math.max(best, records.value[key].netUSD);
+      for (let k in records.value) best = Math.max(best, records.value[k].netUSD);
       return best === -Infinity ? 0 : best;
     });
     const worstDayProfit = computed(() => {
       let worst = Infinity;
-      for (let key in records.value) worst = Math.min(worst, records.value[key].netUSD);
+      for (let k in records.value) worst = Math.min(worst, records.value[k].netUSD);
       return worst === Infinity ? 0 : worst;
     });
+    const sortedRecords = computed(() => Object.entries(records.value).sort((a,b)=>new Date(b[0])-new Date(a[0])));
 
-    const sortedRecords = computed(() => {
-      return Object.entries(records.value).sort((a,b) => new Date(b[0]) - new Date(a[0]));
-    });
-
-    // Calendar helpers
-    function getDaysInMonth(year, month) {
-      return new Date(year, month+1, 0).getDate();
-    }
-    function getFirstDayOfMonth(year, month) {
-      return new Date(year, month, 1).getDay(); // 0 = Sunday, but we want Monday first
-    }
+    // calendar logic
+    function getDaysInMonth(y, m) { return new Date(y, m+1, 0).getDate(); }
+    function getFirstDayOffset(y,m) { let d = new Date(y, m, 1).getDay(); return d === 0 ? 6 : d-1; }
     const calendarDays = computed(() => {
-      const year = currentYear.value;
-      const month = currentMonth.value;
-      const daysInMonth = getDaysInMonth(year, month);
-      const firstDayIdx = getFirstDayOfMonth(year, month);
-      // Adjust to Monday first (if Sunday = 0, shift so Monday=0)
-      let startOffset = (firstDayIdx === 0 ? 6 : firstDayIdx - 1);
-      const days = [];
-      for (let i = 0; i < startOffset; i++) days.push({ dayNum: '', dateStr: null, hasRecord: false });
-      for (let d = 1; d <= daysInMonth; d++) {
-        const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const y = currentYear.value, m = currentMonth.value;
+      const daysInMonth = getDaysInMonth(y,m);
+      const offset = getFirstDayOffset(y,m);
+      let days = [];
+      for (let i=0;i<offset;i++) days.push({ dayNum: null, dateStr: null, hasRecord: false });
+      for (let d=1; d<=daysInMonth; d++) {
+        let dateStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
         days.push({ dayNum: d, dateStr, hasRecord: !!records.value[dateStr] });
       }
       return days;
     });
 
-    function selectDate(dateStr, dateObj) {
+    function selectDate(dateStr) {
+      if (!dateStr) return;
       selectedDateStr.value = dateStr;
       const rec = records.value[dateStr];
-      if (rec) {
-        recordForm.noCount = rec.noCount;
-        recordForm.netUSD = rec.netUSD;
-      } else {
-        recordForm.noCount = 2;
-        recordForm.netUSD = 0;
-      }
+      if (rec) { recordForm.noCount = rec.noCount; recordForm.netUSD = rec.netUSD; }
+      else { recordForm.noCount = 2; recordForm.netUSD = 0; }
     }
-
     function saveRecord() {
       if (!selectedDateStr.value) return;
-      records.value[selectedDateStr.value] = {
-        noCount: recordForm.noCount,
-        netUSD: recordForm.netUSD
-      };
+      records.value[selectedDateStr.value] = { noCount: recordForm.noCount, netUSD: recordForm.netUSD };
       saveRecords();
       selectedDateStr.value = null;
     }
-
     function clearRecord() {
       if (!selectedDateStr.value) return;
       delete records.value[selectedDateStr.value];
       saveRecords();
       selectedDateStr.value = null;
     }
-
     function prevMonth() {
-      if (currentMonth.value === 0) {
-        currentMonth.value = 11;
-        currentYear.value--;
-      } else {
-        currentMonth.value--;
-      }
+      if (currentMonth.value === 0) { currentMonth.value = 11; currentYear.value--; }
+      else currentMonth.value--;
     }
     function nextMonth() {
-      if (currentMonth.value === 11) {
-        currentMonth.value = 0;
-        currentYear.value++;
-      } else {
-        currentMonth.value++;
-      }
+      if (currentMonth.value === 11) { currentMonth.value = 0; currentYear.value++; }
+      else currentMonth.value++;
     }
-
     function resetBankroll() {
-      // reset all records and set bankroll to initial value
       records.value = {};
       saveRecords();
-      state.bankroll = state.bankroll; // keep same input (user can change number)
+      state.bankroll = state.bankroll;
     }
 
     onMounted(() => {
       loadRecords();
-      generate(); // initial matrix generation
+      generate();
     });
 
-    // Watch bankroll changes to update stakes without regenerating? Not needed, user can click generate again.
     return {
-      state,
-      matrices,
-      records,
-      selectedDateStr,
-      recordForm,
-      currentYear,
-      currentMonth,
-      monthNames,
-      calendarDays,
-      matrixStake,
-      currentBankroll,
-      totalRounds,
-      totalNetProfit,
-      avgProfit,
-      bestDayProfit,
-      worstDayProfit,
-      sortedRecords,
-      fmt,
-      generate,
-      selectDate,
-      saveRecord,
-      clearRecord,
-      prevMonth,
-      nextMonth,
-      resetBankroll
+      state, matrices, records, selectedDateStr, recordForm,
+      currentYear, currentMonth, monthNames, calendarDays,
+      matrixStake, currentBankroll, totalRounds, totalNetProfit, avgProfit,
+      bestDayProfit, worstDayProfit, sortedRecords,
+      fmt, generate, selectDate, saveRecord, clearRecord, prevMonth, nextMonth, resetBankroll
     };
   }
 }).mount("#app");
