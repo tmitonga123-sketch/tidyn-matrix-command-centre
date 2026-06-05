@@ -3,9 +3,10 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>TiDyn Matrix Engine – Stable Tracker</title>
+<title>TiDyn Matrix Engine – Full Tracker + Chart</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
   body{background:#0b0c10;color:#e5e7eb;font-family:system-ui}
   [v-cloak]{display:none}
@@ -90,12 +91,23 @@
     <div v-if="selectedDateStr" class="mt-4 p-3 bg-black/30 rounded-xl">
       <div class="font-bold text-amber-300">{{ selectedDateStr }}</div>
       <div class="flex flex-wrap gap-4 items-end mt-2">
-        <div><div class="text-xs">BTTS No count (0-4)</div><input type="number" v-model.number="recordForm.noCount" min="0" max="4" style="width:90px"/></div>
-        <div><div class="text-xs">Net P/L (USD)</div><input type="number" v-model.number="recordForm.netUSD" style="width:120px"/></div>
+        <div><div class="text-xs">BTTS No count (0-4)</div>
+          <input type="number" v-model.number="recordForm.noCount" min="0" max="4" style="width:90px" @change="updateNetFromNoCount"/>
+        </div>
+        <div><div class="text-xs">Net P/L (USD)</div>
+          <input type="number" v-model.number="recordForm.netUSD" style="width:120px"/>
+        </div>
         <button class="btn-gold py-1 px-4" @click="saveRecord">Save</button>
         <button class="btn-secondary py-1 px-4" @click="clearRecord">Delete</button>
       </div>
+      <div class="text-xs text-gray-400 mt-2">* Auto‑calculated from No count (you can override)</div>
     </div>
+  </div>
+
+  <!-- 📈 Chart of daily profit -->
+  <div v-if="totalRounds > 1" class="card mt-5">
+    <div class="font-bold mb-2">📈 Daily profit evolution</div>
+    <canvas id="profitChart" style="max-height: 300px; width:100%"></canvas>
   </div>
 
   <!-- History log -->
@@ -113,7 +125,7 @@
 </div>
 
 <script>
-const { createApp, reactive, ref, computed, onMounted } = Vue;
+const { createApp, reactive, ref, computed, onMounted, watch, nextTick } = Vue;
 
 createApp({
   setup() {
@@ -136,9 +148,12 @@ createApp({
     const currentMonth = ref(new Date().getMonth());
     const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 
+    let chartInstance = null;
+
     const fmt = (n) => Number(n).toFixed(2);
     const matrixStake = computed(() => state.bankroll * 0.0278);
 
+    // ---- Matrix generation (same as before) ----
     function generatePairs() {
       const pairs = [];
       for (let i = 0; i < state.matches.length; i++) {
@@ -151,15 +166,13 @@ createApp({
 
     function solveMatrix(mA, mB, S) {
       if (S <= 0) return { yes1:0, yes2:0, no1:0, no2:0, parlay:0, total:0 };
-      const Y1 = mA.yesOdds - 1;
-      const Y2 = mB.yesOdds - 1;
       const L = 0.3 * S;
       const denom = mA.yesOdds + mB.yesOdds;
       let a = (0.7 * S) / denom;
       let b = a;
       let c = a * (mA.yesOdds / mA.noOdds);
       let d = b * (mB.yesOdds / mB.noOdds);
-      let e = a*Y1 + b*Y2 + L - c - d;
+      let e = a*(mA.yesOdds-1) + b*(mB.yesOdds-1) + L - c - d;
       if (isNaN(e) || e < 0) e = 0;
       return { yes1: a, yes2: b, no1: c, no2: d, parlay: e, total: a+b+c+d+e };
     }
@@ -176,12 +189,101 @@ createApp({
       matrices.value = newMatrices;
     }
 
+    // ---- Calculate expected net profit for a given number of BTTS No's (0-4) ----
+    // For each possible combination of which matches are No, compute total net P/L
+    // Then average for that count.
+    function computeExpectedNetForNoCount() {
+      if (matrices.value.length === 0) return {0:0,1:0,2:0,3:0,4:0};
+      const matches = state.matches.map((m, idx) => ({ name: m.name, idx }));
+      const combos = {};
+      for (let k = 0; k <= 4; k++) combos[k] = [];
+      // generate all combinations of indices (0..3) of size k
+      function generateCombos(arr, k, start, current) {
+        if (current.length === k) {
+          combos[k].push([...current]);
+          return;
+        }
+        for (let i = start; i < arr.length; i++) {
+          current.push(arr[i]);
+          generateCombos(arr, k, i+1, current);
+          current.pop();
+        }
+      }
+      generateCombos([0,1,2,3], 0, 0, []);
+      generateCombos([0,1,2,3], 1, 0, []);
+      generateCombos([0,1,2,3], 2, 0, []);
+      generateCombos([0,1,2,3], 3, 0, []);
+      generateCombos([0,1,2,3], 4, 0, []);
+
+      const results = {0:[],1:[],2:[],3:[],4:[]};
+      for (let k = 0; k <= 4; k++) {
+        for (let combo of combos[k]) {
+          const noSet = new Set(combo);
+          let totalNet = 0;
+          for (let m of matrices.value) {
+            const aIdx = state.matches.findIndex(mm => mm.name === m.pair[0].name);
+            const bIdx = state.matches.findIndex(mm => mm.name === m.pair[1].name);
+            const aIsNo = noSet.has(aIdx);
+            const bIsNo = noSet.has(bIdx);
+            // Determine outcome for this matrix
+            let outcome = '';
+            if (aIsNo && bIsNo) outcome = 'NN';
+            else if (!aIsNo && !bIsNo) outcome = 'YY';
+            else if (!aIsNo && bIsNo) outcome = 'YN';
+            else outcome = 'NY';
+            // Net profit for this matrix based on its stakes and odds
+            const stakes = m.stakes;
+            let net = 0;
+            if (outcome === 'YY') {
+              net = stakes.yes1*(m.pair[0].yesOdds-1) + stakes.yes2*(m.pair[1].yesOdds-1) - (stakes.no1+stakes.no2+stakes.parlay);
+            } else if (outcome === 'YN') {
+              net = stakes.yes1*(m.pair[0].yesOdds-1) + stakes.no2*(m.pair[1].noOdds-1) - (stakes.yes2+stakes.no1+stakes.parlay);
+            } else if (outcome === 'NY') {
+              net = stakes.no1*(m.pair[0].noOdds-1) + stakes.yes2*(m.pair[1].yesOdds-1) - (stakes.yes1+stakes.no2+stakes.parlay);
+            } else { // NN
+              net = stakes.no1*(m.pair[0].noOdds-1) + stakes.no2*(m.pair[1].noOdds-1) + stakes.parlay*(m.parlayOdds-1) - (stakes.yes1+stakes.yes2);
+            }
+            totalNet += net;
+          }
+          results[k].push(totalNet);
+        }
+      }
+      const avg = {};
+      for (let k = 0; k <= 4; k++) {
+        const arr = results[k];
+        if (arr.length === 0) avg[k] = 0;
+        else avg[k] = arr.reduce((a,b)=>a+b,0) / arr.length;
+      }
+      return avg;
+    }
+
+    const expectedNetMap = ref({0:0,1:0,2:0,3:0,4:0});
+    function updateExpectedNetMap() {
+      expectedNetMap.value = computeExpectedNetForNoCount();
+    }
+
+    function updateNetFromNoCount() {
+      const val = expectedNetMap.value[recordForm.noCount];
+      if (val !== undefined) recordForm.netUSD = Math.round(val * 100) / 100;
+    }
+
+    // Watch matrices to recompute expected net
+    watch(matrices, () => {
+      updateExpectedNetMap();
+      if (selectedDateStr.value && !records.value[selectedDateStr.value]) {
+        // auto-fill current noCount if editing new date
+        updateNetFromNoCount();
+      }
+    });
+
+    // ---- Records management ----
     function loadRecords() {
       const stored = localStorage.getItem("TiDynRecords");
       if (stored) records.value = JSON.parse(stored);
     }
     function saveRecords() {
       localStorage.setItem("TiDynRecords", JSON.stringify(records.value));
+      updateChart();
     }
 
     const currentBankroll = computed(() => {
@@ -207,6 +309,25 @@ createApp({
       return worst === Infinity ? 0 : worst;
     });
     const sortedRecords = computed(() => Object.entries(records.value).sort((a,b)=>new Date(b[0])-new Date(a[0])));
+
+    // Chart
+    function updateChart() {
+      if (!chartInstance && document.getElementById('profitChart')) {
+        const ctx = document.getElementById('profitChart').getContext('2d');
+        chartInstance = new Chart(ctx, {
+          type: 'line',
+          data: { labels: [], datasets: [{ label: 'Daily P/L ($)', data: [], borderColor: '#c5a059', tension: 0.2 }] },
+          options: { responsive: true, maintainAspectRatio: true }
+        });
+      }
+      if (chartInstance) {
+        const dates = Object.keys(records.value).sort();
+        const profits = dates.map(d => records.value[d].netUSD);
+        chartInstance.data.labels = dates;
+        chartInstance.data.datasets[0].data = profits;
+        chartInstance.update();
+      }
+    }
 
     // Calendar helpers
     function getDaysInMonth(y,m) { return new Date(y, m+1, 0).getDate(); }
@@ -234,7 +355,7 @@ createApp({
         recordForm.netUSD = rec.netUSD;
       } else {
         recordForm.noCount = 2;
-        recordForm.netUSD = 0;
+        updateNetFromNoCount(); // auto-fill based on current matrices
       }
     }
 
@@ -245,8 +366,6 @@ createApp({
         netUSD: recordForm.netUSD
       };
       saveRecords();
-      // Force calendar refresh
-      calendarDays.value; // no need, but triggers reactivity
       selectedDateStr.value = null;
     }
 
@@ -277,7 +396,12 @@ createApp({
     onMounted(() => {
       loadRecords();
       generate();
+      updateExpectedNetMap();
+      nextTick(() => updateChart());
     });
+
+    // watch records to update chart
+    watch(records, () => { updateChart(); }, { deep: true });
 
     return {
       state,
@@ -303,10 +427,11 @@ createApp({
       saveRecord,
       clearRecord,
       prevMonth,
-      nextMonth
+      nextMonth,
+      updateNetFromNoCount
     };
   }
 }).mount("#app");
 </script>
 </body>
-           </html>
+        </html>
