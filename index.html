@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TiDyn Matrix – Compounding + Chart</title>
+<title>TiDyn Matrix – Monthly Reinvestment</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -39,16 +39,17 @@
   </div>
 
   <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-    <div class="stat-card"><div class="text-xs">Total rounds</div><div class="text-xl">{{ totalRounds }}</div></div>
-    <div class="stat-card"><div class="text-xs">Net profit</div><div class="text-xl" :class="totalNetProfit>=0?'text-green-400':'text-red-400'">${{ fmt(totalNetProfit) }}</div></div>
+    <div class="stat-card"><div class="text-xs">Total rounds (this month)</div><div class="text-xl">{{ monthlyRounds }}</div></div>
+    <div class="stat-card"><div class="text-xs">Month profit</div><div class="text-xl" :class="monthNetProfit>=0?'text-green-400':'text-red-400'">${{ fmt(monthNetProfit) }}</div></div>
     <div class="stat-card"><div class="text-xs">Avg / round</div><div class="text-xl" :class="avgProfit>=0?'text-green-400':'text-red-400'">${{ fmt(avgProfit) }}</div></div>
     <div class="stat-card"><div class="text-xs">Best / worst</div><div class="text-md">${{ fmt(bestDayProfit) }} / ${{ fmt(worstDayProfit) }}</div></div>
   </div>
 
   <div class="card mb-5 flex flex-wrap gap-4 items-end">
-    <div><div class="text-xs text-gray-400">Base bankroll (USD)</div><input type="number" v-model.number="state.bankroll" step="100" style="width:160px" @change="resetAndGenerate"/></div>
-    <div><div class="text-xs text-gray-400">Per matrix stake (2.78% of current bankroll)</div><div class="font-mono">${{ fmt(matrixStake) }}</div></div>
+    <div><div class="text-xs text-gray-400">Base bankroll (USD)</div><input type="number" v-model.number="state.bankroll" step="100" style="width:160px" @change="resetBankroll"/></div>
+    <div><div class="text-xs text-gray-400">Per matrix stake (2.78% of bankroll)</div><div class="font-mono">${{ fmt(matrixStake) }}</div></div>
     <button class="btn-gold" @click="generate">⟳ Generate 6 Matrices</button>
+    <button class="btn-secondary" @click="reinvestMonth">💰 Reinvest Month</button>
   </div>
 
   <div class="card mb-5">
@@ -151,20 +152,80 @@ createApp({
 
     const fmt = (n) => Number(n).toFixed(2);
     
-    // Current bankroll = initial base + sum of recorded profits
+    // Current bankroll = base bankroll + net profit of ALL rounds (historical)
     const currentBankroll = computed(() => {
       let sum = state.bankroll;
       for (let k in records.value) sum += records.value[k].netUSD;
       return sum;
     });
     
-    // Per matrix stake = 2.78% of current bankroll (compounding)
+    // Per matrix stake = 2.78% of base bankroll (not including current month's profit)
+    // This ensures stakes stay constant during the month.
     const matrixStake = computed(() => {
-      const bank = currentBankroll.value;
-      if (bank <= 0) return 0;
-      return bank * 0.0278;
+      const base = state.bankroll;
+      if (base <= 0) return 0;
+      return base * 0.0278;
     });
 
+    // Monthly stats: only rounds in the current month (based on calendar month)
+    const monthlyRounds = computed(() => {
+      const now = new Date();
+      const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+      let count = 0;
+      for (let date in records.value) {
+        if (date.startsWith(currentYearMonth)) count++;
+      }
+      return count;
+    });
+    const monthNetProfit = computed(() => {
+      const now = new Date();
+      const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+      let sum = 0;
+      for (let date in records.value) {
+        if (date.startsWith(currentYearMonth)) sum += records.value[date].netUSD;
+      }
+      return sum;
+    });
+    const totalRounds = computed(() => Object.keys(records.value).length);
+    const totalNetProfit = computed(() => {
+      let sum = 0;
+      for (let k in records.value) sum += records.value[k].netUSD;
+      return sum;
+    });
+    const avgProfit = computed(() => totalRounds.value ? totalNetProfit.value / totalRounds.value : 0);
+    const bestDayProfit = computed(() => {
+      let best = -Infinity;
+      for (let k in records.value) best = Math.max(best, records.value[k].netUSD);
+      return best === -Infinity ? 0 : best;
+    });
+    const worstDayProfit = computed(() => {
+      let worst = Infinity;
+      for (let k in records.value) worst = Math.min(worst, records.value[k].netUSD);
+      return worst === Infinity ? 0 : worst;
+    });
+    const sortedRecords = computed(() => Object.entries(records.value).sort((a,b)=>new Date(b[0])-new Date(a[0])));
+
+    // ---- reinvest month: add month's profit to base bankroll, then delete all records from this month
+    function reinvestMonth() {
+      const profitThisMonth = monthNetProfit.value;
+      if (profitThisMonth === 0) return;
+      state.bankroll += profitThisMonth;
+      // Remove all records from current month
+      const now = new Date();
+      const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+      const newRecords = {};
+      for (let date in records.value) {
+        if (!date.startsWith(currentYearMonth)) {
+          newRecords[date] = records.value[date];
+        }
+      }
+      records.value = newRecords;
+      saveRecords();
+      generate(); // regenerate matrices with new bankroll
+      updateChart();
+    }
+
+    // ---- other functions (generate, solver, etc.) same as before ----
     function generatePairs() {
       const pairs = [];
       for (let i = 0; i < state.matches.length; i++) {
@@ -269,25 +330,6 @@ createApp({
       updateChart();
     }
 
-    const totalRounds = computed(() => Object.keys(records.value).length);
-    const totalNetProfit = computed(() => {
-      let sum = 0;
-      for (let k in records.value) sum += records.value[k].netUSD;
-      return sum;
-    });
-    const avgProfit = computed(() => totalRounds.value ? totalNetProfit.value / totalRounds.value : 0);
-    const bestDayProfit = computed(() => {
-      let best = -Infinity;
-      for (let k in records.value) best = Math.max(best, records.value[k].netUSD);
-      return best === -Infinity ? 0 : best;
-    });
-    const worstDayProfit = computed(() => {
-      let worst = Infinity;
-      for (let k in records.value) worst = Math.min(worst, records.value[k].netUSD);
-      return worst === Infinity ? 0 : worst;
-    });
-    const sortedRecords = computed(() => Object.entries(records.value).sort((a,b)=>new Date(b[0])-new Date(a[0])));
-
     // ---- chart ----
     function updateChart() {
       if (!chartInstance && document.getElementById('profitChart')) {
@@ -343,15 +385,13 @@ createApp({
         netUSD: recordForm.netUSD
       };
       saveRecords();
-      // IMPORTANT: regenerate matrices so stakes use the new bankroll (compounding)
-      generate();
+      // Do NOT regenerate matrices here – stakes remain based on base bankroll
       selectedDateStr.value = null;
     }
     function clearRecord() {
       if (!selectedDateStr.value) return;
       delete records.value[selectedDateStr.value];
       saveRecords();
-      generate();
       selectedDateStr.value = null;
     }
     function prevMonth() {
@@ -363,12 +403,14 @@ createApp({
       else currentMonth.value++;
     }
 
-    function resetAndGenerate() {
-      // base bankroll changed: clear all records? We'll keep records but recalc stakes.
+    function resetBankroll() {
+      // base bankroll changed manually – clear all records and regenerate
+      records.value = {};
+      saveRecords();
       generate();
     }
 
-    // ---- splash screen logic ----
+    // ---- splash screen ----
     onMounted(() => {
       loadRecords();
       setTimeout(() => {
@@ -392,11 +434,13 @@ createApp({
       currentYear, currentMonth, monthNames, calendarDays,
       matrixStake, currentBankroll, totalRounds, totalNetProfit,
       avgProfit, bestDayProfit, worstDayProfit, sortedRecords,
+      monthlyRounds, monthNetProfit,
       fmt, generate, selectDate, saveRecord, clearRecord,
-      prevMonth, nextMonth, updateNetFromNoCount, resetAndGenerate
+      prevMonth, nextMonth, updateNetFromNoCount,
+      reinvestMonth, resetBankroll
     };
   }
 }).mount("#app");
 </script>
 </body>
-           </html>
+  </html>
