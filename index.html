@@ -6,7 +6,6 @@
 <title>TiDyn Matrix – Auto P&L + Compounding</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
   body{background:#0b0c10;color:#e5e7eb;font-family:system-ui}
   [v-cloak]{display:none}
@@ -18,19 +17,9 @@
   .calendar-day{background:#0f121b;border-radius:12px;padding:8px;text-align:center;cursor:pointer}
   .has-record{background:#2a2a1c;border:1px solid #c5a059;color:#ffd966}
   .stat-card{background:#0a0e16;border-radius:20px;padding:12px;text-align:center}
-  .splash-screen{position:fixed;top:0;left:0;width:100%;height:100%;background:#000;z-index:99999;display:flex;justify-content:center;align-items:center;opacity:1;transition:opacity 1s ease}
-  .splash-screen.hide{opacity:0;pointer-events:none}
-  .splash-logo{width:80%;max-width:400px;text-align:center;background:linear-gradient(135deg,#c5a059,#f5d97f);-webkit-background-clip:text;background-clip:text;color:transparent;font-size:3rem;font-weight:bold;font-family:monospace}
-  .splash-logo span{display:block;font-size:1rem;color:#cbd5e1;background:none}
-  .warning{color:#ffaa66;font-size:0.7rem;margin-top:4px}
 </style>
 </head>
 <body>
-
-<div class="splash-screen" id="splash">
-  <div class="splash-logo">TiDyn<br><span>multiverse matrix</span></div>
-</div>
-
 <div id="app" v-cloak>
 <div class="max-w-7xl mx-auto px-4 py-4">
 
@@ -61,7 +50,7 @@
         <div class="text-xs mt-1">No (pre) <input type="number" step="0.01" v-model.number="m.noOdds" class="mt-1" @change="generate"/></div>
       </div>
     </div>
-    <div v-if="oddsWarning" class="warning">⚠️ Some odds are invalid (must be >1). Stakes may be zero.</div>
+    <div v-if="oddsWarning" class="text-red-400 text-xs mt-2">⚠️ Odds must be >1. Stakes may be zero.</div>
   </div>
 
   <div v-if="matrices.length" class="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
@@ -105,13 +94,8 @@
         <button class="btn-gold py-1 px-4" @click="saveRecord">Save</button>
         <button class="btn-secondary py-1 px-4" @click="clearRecord">Delete</button>
       </div>
-      <div class="text-xs text-gray-400 mt-2">* Net P/L auto‑fills from No count. You can edit if actual differs.</div>
+      <div class="text-xs text-gray-400 mt-2">* Net P/L auto‑fills from No count. You can override if actual differs.</div>
     </div>
-  </div>
-
-  <div v-if="totalRounds > 1" class="card mt-5">
-    <div class="font-bold mb-2">📈 Daily profit evolution</div>
-    <canvas id="profitChart" style="max-height: 280px; width:100%"></canvas>
   </div>
 
   <div v-if="Object.keys(records).length" class="card mt-5">
@@ -128,7 +112,7 @@
 </div>
 
 <script>
-const { createApp, reactive, ref, computed, onMounted, watch, nextTick } = Vue;
+const { createApp, reactive, ref, computed, onMounted, watch } = Vue;
 
 createApp({
   setup() {
@@ -148,34 +132,23 @@ createApp({
     const currentYear = ref(new Date().getFullYear());
     const currentMonth = ref(new Date().getMonth());
     const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-    let chartInstance = null;
 
-    const safeNumber = (val, def=0) => {
-      let n = Number(val);
-      return isNaN(n) ? def : n;
-    };
-
+    const safeNumber = (val, def=0) => { let n = Number(val); return isNaN(n) ? def : n; };
     const fmt = (n) => safeNumber(n).toFixed(2);
-    
+
     const currentBankroll = computed(() => {
       let sum = safeNumber(state.bankroll);
-      for (let k in records.value) {
-        sum += safeNumber(records.value[k].netUSD);
-      }
+      for (let k in records.value) sum += safeNumber(records.value[k].netUSD);
       return sum;
     });
-    
     const matrixStake = computed(() => {
       const bank = currentBankroll.value;
       if (bank <= 0) return 0;
       return bank * 0.0278;
     });
+    const oddsWarning = computed(() => state.matches.some(m => m.yesOdds <= 1 || m.noOdds <= 1));
 
-    const oddsWarning = computed(() => {
-      return state.matches.some(m => m.yesOdds <= 1 || m.noOdds <= 1);
-    });
-
-    // Exact 5x5 solver
+    // Exact 5x5 linear solver
     function solveMatrixExact(mA, mB, S) {
       S = safeNumber(S);
       if (S <= 0) return { yes1:0, yes2:0, no1:0, no2:0, parlay:0, total:0 };
@@ -183,9 +156,7 @@ createApp({
       const N1 = safeNumber(mA.noOdds, 1.01);
       const Y2 = safeNumber(mB.yesOdds, 1.01);
       const N2 = safeNumber(mB.noOdds, 1.01);
-      if (Y1 <= 1 || N1 <= 1 || Y2 <= 1 || N2 <= 1) {
-        return { yes1:0, yes2:0, no1:0, no2:0, parlay:0, total:0 };
-      }
+      if (Y1 <= 1 || N1 <= 1 || Y2 <= 1 || N2 <= 1) return { yes1:0, yes2:0, no1:0, no2:0, parlay:0, total:0 };
       const A = [
         [ (Y1-1), (Y2-1), -1, -1, -1 ],
         [ (Y1-1), -1, -1, (N2-1), -1 ],
@@ -235,12 +206,12 @@ createApp({
     }
 
     function generate() {
-      const S = matrixStake.value;
-      if (S <= 0 || oddsWarning.value) {
+      if (oddsWarning.value || matrixStake.value <= 0) {
         matrices.value = [];
         return;
       }
       const pairs = generatePairs();
+      const S = matrixStake.value;
       const newMatrices = [];
       for (let [mA, mB] of pairs) {
         const stakes = solveMatrixExact(mA, mB, S);
@@ -306,14 +277,9 @@ createApp({
     // localStorage
     function loadRecords() {
       const stored = localStorage.getItem("TiDynRecords");
-      if (stored) {
-        try { records.value = JSON.parse(stored); } catch(e) { records.value = {}; }
-      }
+      if (stored) try { records.value = JSON.parse(stored); } catch(e) { records.value = {}; }
     }
-    function saveRecords() {
-      localStorage.setItem("TiDynRecords", JSON.stringify(records.value));
-      updateChart();
-    }
+    function saveRecords() { localStorage.setItem("TiDynRecords", JSON.stringify(records.value)); }
 
     const totalRounds = computed(() => Object.keys(records.value).length);
     const totalNetProfit = computed(() => {
@@ -333,26 +299,6 @@ createApp({
       return worst === Infinity ? 0 : worst;
     });
     const sortedRecords = computed(() => Object.entries(records.value).sort((a,b)=>new Date(b[0])-new Date(a[0])));
-
-    // Chart
-    function updateChart() {
-      if (!chartInstance && document.getElementById('profitChart')) {
-        const ctx = document.getElementById('profitChart').getContext('2d');
-        chartInstance = new Chart(ctx, {
-          type: 'line',
-          data: { labels: [], datasets: [{ label: 'Daily P/L ($)', data: [], borderColor: '#c5a059', tension: 0.2 }] },
-          options: { responsive: true, maintainAspectRatio: true }
-        });
-      }
-      if (chartInstance) {
-        const dates = Object.keys(records.value).sort();
-        const profits = dates.map(d => safeNumber(records.value[d].netUSD));
-        chartInstance.data.labels = dates;
-        chartInstance.data.datasets[0].data = profits;
-        chartInstance.update();
-      }
-    }
-    watch(records, () => updateChart(), { deep: true });
 
     // Calendar
     function getDaysInMonth(y,m) { return new Date(y, m+1, 0).getDate(); }
@@ -384,14 +330,12 @@ createApp({
     }
     function saveRecord() {
       if (!selectedDateStr.value) return;
-      // Ensure netUSD is recalculated from noCount before saving (if user didn't manually change)
-      // But we'll just save whatever is in the field – user can override.
       records.value[selectedDateStr.value] = {
         noCount: recordForm.noCount,
         netUSD: safeNumber(recordForm.netUSD)
       };
       saveRecords();
-      generate(); // regenerate matrices with new bankroll
+      generate(); // update stakes with new bankroll
       selectedDateStr.value = null;
     }
     function clearRecord() {
@@ -412,33 +356,18 @@ createApp({
 
     onMounted(() => {
       loadRecords();
-      setTimeout(() => {
-        const splash = document.getElementById("splash");
-        if (splash) {
-          splash.classList.add("hide");
-          setTimeout(() => {
-            if (splash.parentNode) splash.remove();
-            generate();
-            nextTick(() => updateChart());
-          }, 900);
-        } else {
-          generate();
-          nextTick(() => updateChart());
-        }
-      }, 2500);
+      generate();
     });
 
     return {
       state, matrices, records, selectedDateStr, recordForm,
       currentYear, currentMonth, monthNames, calendarDays,
-      matrixStake, currentBankroll, totalRounds, totalNetProfit,
-      avgProfit, bestDayProfit, worstDayProfit, sortedRecords,
-      oddsWarning,
-      fmt, generate, selectDate, saveRecord, clearRecord,
-      prevMonth, nextMonth, updateNetFromNoCount
+      matrixStake, currentBankroll, oddsWarning,
+      totalRounds, totalNetProfit, avgProfit, bestDayProfit, worstDayProfit, sortedRecords,
+      fmt, generate, selectDate, saveRecord, clearRecord, prevMonth, nextMonth, updateNetFromNoCount
     };
   }
 }).mount("#app");
 </script>
 </body>
-        </html>
+  </html>
