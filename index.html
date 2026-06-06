@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TiDyn Matrix – Compounding Bankroll</title>
+<title>TiDyn Matrix – Compounding (NaN fix)</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -144,20 +144,33 @@ createApp({
     const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
     let chartInstance = null;
 
-    const fmt = (n) => Number(n).toFixed(2);
+    const fmt = (n) => {
+      if (isNaN(n)) return "0.00";
+      return Number(n).toFixed(2);
+    };
     
     // Current bankroll = initial base + sum of all recorded net profits (compounding)
     const currentBankroll = computed(() => {
       let sum = state.bankroll;
-      for (let k in records.value) sum += records.value[k].netUSD;
+      if (isNaN(sum)) sum = 0;
+      for (let k in records.value) {
+        let val = records.value[k].netUSD;
+        if (isNaN(val)) val = 0;
+        sum += val;
+      }
       return sum;
     });
     
-    // Per‑matrix stake = 2.78% of current bankroll (so it grows with profits)
-    const matrixStake = computed(() => currentBankroll.value * 0.0278);
+    // Per‑matrix stake = 2.78% of current bankroll, with safe guard
+    const matrixStake = computed(() => {
+      const bank = currentBankroll.value;
+      if (isNaN(bank) || bank <= 0) return 0;
+      return bank * 0.0278;
+    });
 
     // ------------- EXACT 5x5 LINEAR SOLVER -------------
     function solveMatrixExact(mA, mB, S) {
+      if (isNaN(S) || S <= 0) return { yes1:0, yes2:0, no1:0, no2:0, parlay:0, total:0 };
       const Y1 = mA.yesOdds, N1 = mA.noOdds;
       const Y2 = mB.yesOdds, N2 = mB.noOdds;
       const A = [
@@ -209,8 +222,12 @@ createApp({
     }
 
     function generate() {
-      const pairs = generatePairs();
       const S = matrixStake.value;
+      if (isNaN(S) || S <= 0) {
+        matrices.value = [];
+        return;
+      }
+      const pairs = generatePairs();
       const newMatrices = [];
       for (let [mA, mB] of pairs) {
         const stakes = solveMatrixExact(mA, mB, S);
@@ -266,7 +283,8 @@ createApp({
     function updateExpectedNetMap() { expectedNetMap.value = computeExpectedNetForNoCount(); }
     function updateNetFromNoCount() {
       const val = expectedNetMap.value[recordForm.noCount];
-      if (val !== undefined) recordForm.netUSD = Math.round(val * 100) / 100;
+      if (val !== undefined && !isNaN(val)) recordForm.netUSD = Math.round(val * 100) / 100;
+      else recordForm.netUSD = 0;
     }
 
     watch(matrices, () => {
@@ -277,7 +295,12 @@ createApp({
     // ---- localStorage & records ----
     function loadRecords() {
       const stored = localStorage.getItem("TiDynRecords");
-      if (stored) records.value = JSON.parse(stored);
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          records.value = parsed;
+        } catch(e) { records.value = {}; }
+      }
     }
     function saveRecords() {
       localStorage.setItem("TiDynRecords", JSON.stringify(records.value));
@@ -287,18 +310,28 @@ createApp({
     const totalRounds = computed(() => Object.keys(records.value).length);
     const totalNetProfit = computed(() => {
       let sum = 0;
-      for (let k in records.value) sum += records.value[k].netUSD;
+      for (let k in records.value) {
+        let v = records.value[k].netUSD;
+        if (isNaN(v)) v = 0;
+        sum += v;
+      }
       return sum;
     });
     const avgProfit = computed(() => totalRounds.value ? totalNetProfit.value / totalRounds.value : 0);
     const bestDayProfit = computed(() => {
       let best = -Infinity;
-      for (let k in records.value) best = Math.max(best, records.value[k].netUSD);
+      for (let k in records.value) {
+        let v = records.value[k].netUSD;
+        if (!isNaN(v) && v > best) best = v;
+      }
       return best === -Infinity ? 0 : best;
     });
     const worstDayProfit = computed(() => {
       let worst = Infinity;
-      for (let k in records.value) worst = Math.min(worst, records.value[k].netUSD);
+      for (let k in records.value) {
+        let v = records.value[k].netUSD;
+        if (!isNaN(v) && v < worst) worst = v;
+      }
       return worst === Infinity ? 0 : worst;
     });
     const sortedRecords = computed(() => Object.entries(records.value).sort((a,b)=>new Date(b[0])-new Date(a[0])));
@@ -315,7 +348,10 @@ createApp({
       }
       if (chartInstance) {
         const dates = Object.keys(records.value).sort();
-        const profits = dates.map(d => records.value[d].netUSD);
+        const profits = dates.map(d => {
+          let v = records.value[d].netUSD;
+          return isNaN(v) ? 0 : v;
+        });
         chartInstance.data.labels = dates;
         chartInstance.data.datasets[0].data = profits;
         chartInstance.update();
@@ -353,15 +389,13 @@ createApp({
     }
     function saveRecord() {
       if (!selectedDateStr.value) return;
+      if (isNaN(recordForm.netUSD)) recordForm.netUSD = 0;
       records.value[selectedDateStr.value] = {
         noCount: recordForm.noCount,
         netUSD: recordForm.netUSD
       };
       saveRecords();
-      // After saving, the currentBankroll changes, so we need to regenerate matrices? 
-      // Actually, we should auto‑update the stakes for future rounds. The user can click "Generate" again.
-      // But we can also automatically call generate() to reflect new stakes immediately.
-      generate();  // this will use the new currentBankroll via matrixStake
+      generate();  // regenerate with new bankroll
       selectedDateStr.value = null;
     }
     function clearRecord() {
