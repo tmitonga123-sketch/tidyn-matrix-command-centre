@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TiDyn Matrix – Final (Period Reset + Audit)</title>
+<title>TiDyn Matrix – Final Stable</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -18,7 +18,7 @@
   .calendar-day{background:#0f121b;border-radius:12px;padding:8px;text-align:center;cursor:pointer}
   .has-record{background:#2a2a1c;border:1px solid #c5a059;color:#ffd966}
   .stat-card{background:#0a0e16;border-radius:20px;padding:12px;text-align:center}
-  .splash-screen{position:fixed;top:0;left:0;width:100%;height:100%;background:#000;z-index:99999;display:flex;justify-content:center;align-items:center;opacity:1;transition:opacity 1s ease}
+  .splash-screen{position:fixed;top:0;left:0;width:100%;height:100%;background:#000;z-index:99999;display:flex;justify-content:center;align-items:center;opacity:1;transition:opacity 1s ease; pointer-events:none;}
   .splash-screen.hide{opacity:0;pointer-events:none}
   .splash-logo{width:80%;max-width:400px;text-align:center;background:linear-gradient(135deg,#c5a059,#f5d97f);-webkit-background-clip:text;background-clip:text;color:transparent;font-size:3rem;font-weight:bold;font-family:monospace}
   .splash-logo span{display:block;font-size:1rem;color:#cbd5e1;background:none}
@@ -171,7 +171,7 @@ createApp({
       if (base <= 0) return 0;
       return base * 0.0278;
     });
-    const oddsWarning = computed(() => state.matches.some(m => m.yesOdds <= 1 || m.noOdds <= 1));
+    const oddsWarning = computed(() => state.matches.some(m => safeNum(m.yesOdds) <= 1 || safeNum(m.noOdds) <= 1));
 
     // All-time stats
     const totalRounds = computed(() => Object.keys(records.value).length);
@@ -193,51 +193,56 @@ createApp({
     });
     const sortedRecords = computed(() => Object.entries(records.value).sort((a,b)=>new Date(b[0])-new Date(a[0])));
 
-    // --- exact 5x5 linear solver (works for any odds) ---
+    // --- exact 5x5 linear solver with full error handling ---
     function solveMatrixExact(mA, mB, S) {
-      S = safeNum(S);
-      if (S <= 0) return { yes1:0, yes2:0, no1:0, no2:0, parlay:0, total:0 };
-      const Y1 = safeNum(mA.yesOdds, 1.01);
-      const N1 = safeNum(mA.noOdds, 1.01);
-      const Y2 = safeNum(mB.yesOdds, 1.01);
-      const N2 = safeNum(mB.noOdds, 1.01);
-      if (Y1 <= 1 || N1 <= 1 || Y2 <= 1 || N2 <= 1) return { yes1:0, yes2:0, no1:0, no2:0, parlay:0, total:0 };
-      const A = [
-        [ Y1-1, Y2-1, -1, -1, -1 ],
-        [ Y1-1, -1, -1, N2-1, -1 ],
-        [ -1, Y2-1, N1-1, -1, -1 ],
-        [ -1, -1, N1-1, N2-1, N1*N2-1 ],
-        [ 1, 1, 1, 1, 1 ]
-      ];
-      const B = [ -0.3*S, -0.3*S, -0.3*S, 2.25*S, S ];
-      const n = 5;
-      let M = A.map(row => [...row]);
-      let R = [...B];
-      for (let i = 0; i < n; i++) {
-        let maxRow = i;
-        for (let k = i+1; k < n; k++) if (Math.abs(M[k][i]) > Math.abs(M[maxRow][i])) maxRow = k;
-        [M[i], M[maxRow]] = [M[maxRow], M[i]];
-        [R[i], R[maxRow]] = [R[maxRow], R[i]];
-        for (let k = i+1; k < n; k++) {
-          const factor = M[k][i] / M[i][i];
-          for (let j = i; j < n; j++) M[k][j] -= factor * M[i][j];
-          R[k] -= factor * R[i];
+      try {
+        S = safeNum(S);
+        if (S <= 0) return { yes1:0, yes2:0, no1:0, no2:0, parlay:0, total:0 };
+        const Y1 = safeNum(mA.yesOdds, 1.01);
+        const N1 = safeNum(mA.noOdds, 1.01);
+        const Y2 = safeNum(mB.yesOdds, 1.01);
+        const N2 = safeNum(mB.noOdds, 1.01);
+        if (Y1 <= 1 || N1 <= 1 || Y2 <= 1 || N2 <= 1) return { yes1:0, yes2:0, no1:0, no2:0, parlay:0, total:0 };
+        const A = [
+          [ Y1-1, Y2-1, -1, -1, -1 ],
+          [ Y1-1, -1, -1, N2-1, -1 ],
+          [ -1, Y2-1, N1-1, -1, -1 ],
+          [ -1, -1, N1-1, N2-1, N1*N2-1 ],
+          [ 1, 1, 1, 1, 1 ]
+        ];
+        const B = [ -0.3*S, -0.3*S, -0.3*S, 2.25*S, S ];
+        const n = 5;
+        let M = A.map(row => [...row]);
+        let R = [...B];
+        for (let i = 0; i < n; i++) {
+          let maxRow = i;
+          for (let k = i+1; k < n; k++) if (Math.abs(M[k][i]) > Math.abs(M[maxRow][i])) maxRow = k;
+          [M[i], M[maxRow]] = [M[maxRow], M[i]];
+          [R[i], R[maxRow]] = [R[maxRow], R[i]];
+          for (let k = i+1; k < n; k++) {
+            const factor = M[k][i] / M[i][i];
+            for (let j = i; j < n; j++) M[k][j] -= factor * M[i][j];
+            R[k] -= factor * R[i];
+          }
         }
+        const X = new Array(n).fill(0);
+        for (let i = n-1; i >= 0; i--) {
+          let sum = 0;
+          for (let j = i+1; j < n; j++) sum += M[i][j] * X[j];
+          X[i] = (R[i] - sum) / M[i][i];
+        }
+        let [a,b,c,d,e] = X;
+        a = Math.max(0,a); b = Math.max(0,b); c = Math.max(0,c); d = Math.max(0,d); e = Math.max(0,e);
+        const total = a+b+c+d+e;
+        if (total > 0 && Math.abs(total - S) > 0.01) {
+          const factor = S / total;
+          a *= factor; b *= factor; c *= factor; d *= factor; e *= factor;
+        }
+        return { yes1: a, yes2: b, no1: c, no2: d, parlay: e, total: a+b+c+d+e };
+      } catch(e) {
+        console.warn("Solver error", e);
+        return { yes1:0, yes2:0, no1:0, no2:0, parlay:0, total:0 };
       }
-      const X = new Array(n).fill(0);
-      for (let i = n-1; i >= 0; i--) {
-        let sum = 0;
-        for (let j = i+1; j < n; j++) sum += M[i][j] * X[j];
-        X[i] = (R[i] - sum) / M[i][i];
-      }
-      let [a,b,c,d,e] = X;
-      a = Math.max(0,a); b = Math.max(0,b); c = Math.max(0,c); d = Math.max(0,d); e = Math.max(0,e);
-      const total = a+b+c+d+e;
-      if (total > 0 && Math.abs(total - S) > 0.01) {
-        const factor = S / total;
-        a *= factor; b *= factor; c *= factor; d *= factor; e *= factor;
-      }
-      return { yes1: a, yes2: b, no1: c, no2: d, parlay: e, total: a+b+c+d+e };
     }
 
     function generatePairs() {
@@ -265,7 +270,7 @@ createApp({
       updateExpectedNetMap();
     }
 
-    // --- expected net for each No count (0-4) ---
+    // --- expected net for each No count ---
     function computeExpectedNetForNoCount() {
       if (matrices.value.length === 0) return {0:0,1:0,2:0,3:0,4:0};
       const combos = {0:[[]],1:[],2:[],3:[],4:[[0,1,2,3]]};
@@ -289,8 +294,8 @@ createApp({
             const aIsNo = noSet.has(aIdx);
             const bIsNo = noSet.has(bIdx);
             const st = m.stakes;
-            const Y1 = m.pair[0].yesOdds, N1 = m.pair[0].noOdds;
-            const Y2 = m.pair[1].yesOdds, N2 = m.pair[1].noOdds;
+            const Y1 = safeNum(m.pair[0].yesOdds), N1 = safeNum(m.pair[0].noOdds);
+            const Y2 = safeNum(m.pair[1].yesOdds), N2 = safeNum(m.pair[1].noOdds);
             let net = 0;
             if (!aIsNo && !bIsNo) net = st.yes1*(Y1-1) + st.yes2*(Y2-1) - (st.no1+st.no2+st.parlay);
             else if (!aIsNo && bIsNo) net = st.yes1*(Y1-1) + st.no2*(N2-1) - (st.yes2+st.no1+st.parlay);
@@ -319,21 +324,29 @@ createApp({
 
     // --- period & localStorage ---
     function loadPeriodStats() {
-      const pProfit = localStorage.getItem("TiDynPeriodProfit");
-      const pRounds = localStorage.getItem("TiDynPeriodRounds");
-      if (pProfit !== null) periodProfit.value = safeNum(pProfit);
-      if (pRounds !== null) periodRounds.value = safeNum(pRounds);
+      try {
+        const pProfit = localStorage.getItem("TiDynPeriodProfit");
+        const pRounds = localStorage.getItem("TiDynPeriodRounds");
+        if (pProfit !== null) periodProfit.value = safeNum(pProfit);
+        if (pRounds !== null) periodRounds.value = safeNum(pRounds);
+      } catch(e) {}
     }
     function savePeriodStats() {
-      localStorage.setItem("TiDynPeriodProfit", periodProfit.value);
-      localStorage.setItem("TiDynPeriodRounds", periodRounds.value);
+      try {
+        localStorage.setItem("TiDynPeriodProfit", periodProfit.value);
+        localStorage.setItem("TiDynPeriodRounds", periodRounds.value);
+      } catch(e) {}
     }
     function loadRecords() {
-      const stored = localStorage.getItem("TiDynRecords");
-      if (stored) records.value = JSON.parse(stored);
+      try {
+        const stored = localStorage.getItem("TiDynRecords");
+        if (stored) records.value = JSON.parse(stored);
+      } catch(e) { records.value = {}; }
     }
     function saveRecords() {
-      localStorage.setItem("TiDynRecords", JSON.stringify(records.value));
+      try {
+        localStorage.setItem("TiDynRecords", JSON.stringify(records.value));
+      } catch(e) {}
       updateChart();
     }
 
@@ -420,18 +433,4 @@ createApp({
       let days = [];
       for (let i=0; i<offset; i++) days.push({ dayNum: null, dateStr: null, hasRecord: false, id: `e-${i}` });
       for (let d=1; d<=daysInMonth; d++) {
-        const dateStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-        days.push({ dayNum: d, dateStr, hasRecord: !!records.value[dateStr], id: dateStr });
-      }
-      return days;
-    });
-    function prevMonth() {
-      if (currentMonth.value === 0) { currentMonth.value = 11; currentYear.value--; }
-      else currentMonth.value--;
-    }
-    function nextMonth() {
-      if (currentMonth.value === 11) { currentMonth.value = 0; currentYear.value++; }
-      else currentMonth.value++;
-    }
-
-    // --- s
+        const dateStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padSt
