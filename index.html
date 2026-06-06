@@ -3,9 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TiDyn Matrix – Auto P&L + Compounding</title>
+<title>TiDyn Matrix – Compounding + Chart</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
   body{background:#0b0c10;color:#e5e7eb;font-family:system-ui}
   [v-cloak]{display:none}
@@ -17,9 +18,18 @@
   .calendar-day{background:#0f121b;border-radius:12px;padding:8px;text-align:center;cursor:pointer}
   .has-record{background:#2a2a1c;border:1px solid #c5a059;color:#ffd966}
   .stat-card{background:#0a0e16;border-radius:20px;padding:12px;text-align:center}
+  .splash-screen{position:fixed;top:0;left:0;width:100%;height:100%;background:#000;z-index:99999;display:flex;justify-content:center;align-items:center;opacity:1;transition:opacity 1s ease}
+  .splash-screen.hide{opacity:0;pointer-events:none}
+  .splash-logo{width:80%;max-width:400px;text-align:center;background:linear-gradient(135deg,#c5a059,#f5d97f);-webkit-background-clip:text;background-clip:text;color:transparent;font-size:3rem;font-weight:bold;font-family:monospace}
+  .splash-logo span{display:block;font-size:1rem;color:#cbd5e1;background:none}
 </style>
 </head>
 <body>
+
+<div class="splash-screen" id="splash">
+  <div class="splash-logo">TiDyn<br><span>multiverse matrix</span></div>
+</div>
+
 <div id="app" v-cloak>
 <div class="max-w-7xl mx-auto px-4 py-4">
 
@@ -36,7 +46,7 @@
   </div>
 
   <div class="card mb-5 flex flex-wrap gap-4 items-end">
-    <div><div class="text-xs text-gray-400">Base bankroll (USD)</div><input type="number" v-model.number="state.bankroll" step="100" style="width:160px" @change="generate"/></div>
+    <div><div class="text-xs text-gray-400">Base bankroll (USD)</div><input type="number" v-model.number="state.bankroll" step="100" style="width:160px" @change="resetAndGenerate"/></div>
     <div><div class="text-xs text-gray-400">Per matrix stake (2.78% of current bankroll)</div><div class="font-mono">${{ fmt(matrixStake) }}</div></div>
     <button class="btn-gold" @click="generate">⟳ Generate 6 Matrices</button>
   </div>
@@ -50,7 +60,6 @@
         <div class="text-xs mt-1">No (pre) <input type="number" step="0.01" v-model.number="m.noOdds" class="mt-1" @change="generate"/></div>
       </div>
     </div>
-    <div v-if="oddsWarning" class="text-red-400 text-xs mt-2">⚠️ Odds must be >1. Stakes may be zero.</div>
   </div>
 
   <div v-if="matrices.length" class="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
@@ -89,13 +98,18 @@
           <input type="number" v-model.number="recordForm.noCount" min="0" max="4" style="width:90px" @change="updateNetFromNoCount"/>
         </div>
         <div><div class="text-xs">Net P/L (USD)</div>
-          <input type="number" v-model.number="recordForm.netUSD" style="width:120px" step="0.01"/>
+          <input type="number" v-model.number="recordForm.netUSD" style="width:120px"/>
         </div>
         <button class="btn-gold py-1 px-4" @click="saveRecord">Save</button>
         <button class="btn-secondary py-1 px-4" @click="clearRecord">Delete</button>
       </div>
-      <div class="text-xs text-gray-400 mt-2">* Net P/L auto‑fills from No count. You can override if actual differs.</div>
+      <div class="text-xs text-gray-400 mt-2">* Auto‑calculated from No count based on current matrix stakes</div>
     </div>
+  </div>
+
+  <div v-if="totalRounds > 1" class="card mt-5">
+    <div class="font-bold mb-2">📈 Daily profit evolution</div>
+    <canvas id="profitChart" style="max-height: 280px; width:100%"></canvas>
   </div>
 
   <div v-if="Object.keys(records).length" class="card mt-5">
@@ -108,11 +122,12 @@
       </div>
     </div>
   </div>
+
 </div>
 </div>
 
 <script>
-const { createApp, reactive, ref, computed, onMounted, watch } = Vue;
+const { createApp, reactive, ref, computed, onMounted, watch, nextTick } = Vue;
 
 createApp({
   setup() {
@@ -132,68 +147,23 @@ createApp({
     const currentYear = ref(new Date().getFullYear());
     const currentMonth = ref(new Date().getMonth());
     const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+    let chartInstance = null;
 
-    const safeNumber = (val, def=0) => { let n = Number(val); return isNaN(n) ? def : n; };
-    const fmt = (n) => safeNumber(n).toFixed(2);
-
+    const fmt = (n) => Number(n).toFixed(2);
+    
+    // Current bankroll = initial base + sum of recorded profits
     const currentBankroll = computed(() => {
-      let sum = safeNumber(state.bankroll);
-      for (let k in records.value) sum += safeNumber(records.value[k].netUSD);
+      let sum = state.bankroll;
+      for (let k in records.value) sum += records.value[k].netUSD;
       return sum;
     });
+    
+    // Per matrix stake = 2.78% of current bankroll (compounding)
     const matrixStake = computed(() => {
       const bank = currentBankroll.value;
       if (bank <= 0) return 0;
       return bank * 0.0278;
     });
-    const oddsWarning = computed(() => state.matches.some(m => m.yesOdds <= 1 || m.noOdds <= 1));
-
-    // Exact 5x5 linear solver
-    function solveMatrixExact(mA, mB, S) {
-      S = safeNumber(S);
-      if (S <= 0) return { yes1:0, yes2:0, no1:0, no2:0, parlay:0, total:0 };
-      const Y1 = safeNumber(mA.yesOdds, 1.01);
-      const N1 = safeNumber(mA.noOdds, 1.01);
-      const Y2 = safeNumber(mB.yesOdds, 1.01);
-      const N2 = safeNumber(mB.noOdds, 1.01);
-      if (Y1 <= 1 || N1 <= 1 || Y2 <= 1 || N2 <= 1) return { yes1:0, yes2:0, no1:0, no2:0, parlay:0, total:0 };
-      const A = [
-        [ (Y1-1), (Y2-1), -1, -1, -1 ],
-        [ (Y1-1), -1, -1, (N2-1), -1 ],
-        [ -1, (Y2-1), (N1-1), -1, -1 ],
-        [ -1, -1, (N1-1), (N2-1), (N1*N2-1) ],
-        [ 1, 1, 1, 1, 1 ]
-      ];
-      const B = [ -0.3*S, -0.3*S, -0.3*S, 2.25*S, S ];
-      const n = 5;
-      let M = A.map(row => [...row]);
-      let R = [...B];
-      for (let i = 0; i < n; i++) {
-        let maxRow = i;
-        for (let k = i+1; k < n; k++) if (Math.abs(M[k][i]) > Math.abs(M[maxRow][i])) maxRow = k;
-        [M[i], M[maxRow]] = [M[maxRow], M[i]];
-        [R[i], R[maxRow]] = [R[maxRow], R[i]];
-        for (let k = i+1; k < n; k++) {
-          const factor = M[k][i] / M[i][i];
-          for (let j = i; j < n; j++) M[k][j] -= factor * M[i][j];
-          R[k] -= factor * R[i];
-        }
-      }
-      const X = new Array(n).fill(0);
-      for (let i = n-1; i >= 0; i--) {
-        let sum = 0;
-        for (let j = i+1; j < n; j++) sum += M[i][j] * X[j];
-        X[i] = (R[i] - sum) / M[i][i];
-      }
-      let [a,b,c,d,e] = X;
-      a = Math.max(0,a); b = Math.max(0,b); c = Math.max(0,c); d = Math.max(0,d); e = Math.max(0,e);
-      const total = a+b+c+d+e;
-      if (total > 0 && Math.abs(total - S) > 0.01) {
-        const factor = S / total;
-        a *= factor; b *= factor; c *= factor; d *= factor; e *= factor;
-      }
-      return { yes1: a, yes2: b, no1: c, no2: d, parlay: e, total: a+b+c+d+e };
-    }
 
     function generatePairs() {
       const pairs = [];
@@ -205,17 +175,32 @@ createApp({
       return pairs;
     }
 
+    function solveMatrix(mA, mB, S) {
+      if (S <= 0) return { yes1:0, yes2:0, no1:0, no2:0, parlay:0, total:0 };
+      const Y1 = mA.yesOdds - 1;
+      const Y2 = mB.yesOdds - 1;
+      const L = 0.3 * S;
+      const denom = mA.yesOdds + mB.yesOdds;
+      let a = (0.7 * S) / denom;
+      let b = a;
+      let c = a * (mA.yesOdds / mA.noOdds);
+      let d = b * (mB.yesOdds / mB.noOdds);
+      let e = a*Y1 + b*Y2 + L - c - d;
+      if (isNaN(e) || e < 0) e = 0;
+      return { yes1: a, yes2: b, no1: c, no2: d, parlay: e, total: a+b+c+d+e };
+    }
+
     function generate() {
-      if (oddsWarning.value || matrixStake.value <= 0) {
+      const S = matrixStake.value;
+      if (S <= 0) {
         matrices.value = [];
         return;
       }
       const pairs = generatePairs();
-      const S = matrixStake.value;
       const newMatrices = [];
       for (let [mA, mB] of pairs) {
-        const stakes = solveMatrixExact(mA, mB, S);
-        const parlayOdds = safeNumber(mA.noOdds) * safeNumber(mB.noOdds);
+        const stakes = solveMatrix(mA, mB, S);
+        const parlayOdds = mA.noOdds * mB.noOdds;
         newMatrices.push({ pair: [mA, mB], parlayOdds, stakes });
       }
       matrices.value = newMatrices;
@@ -224,19 +209,19 @@ createApp({
 
     function computeExpectedNetForNoCount() {
       if (matrices.value.length === 0) return {0:0,1:0,2:0,3:0,4:0};
-      const allCombos = [];
-      for (let k=0; k<=4; k++) {
-        const combos = [];
+      const combos = {0:[[]],1:[],2:[],3:[],4:[[0,1,2,3]]};
+      for (let k=1; k<=3; k++) {
+        const res = [];
         const backtrack = (start, curr) => {
-          if (curr.length === k) { combos.push([...curr]); return; }
+          if (curr.length === k) { res.push([...curr]); return; }
           for (let i=start; i<4; i++) { curr.push(i); backtrack(i+1, curr); curr.pop(); }
         };
         backtrack(0, []);
-        allCombos[k] = combos;
+        combos[k] = res;
       }
       const results = {0:[],1:[],2:[],3:[],4:[]};
       for (let k=0; k<=4; k++) {
-        for (let combo of allCombos[k]) {
+        for (let combo of combos[k]) {
           const noSet = new Set(combo);
           let totalNet = 0;
           for (let m of matrices.value) {
@@ -245,8 +230,8 @@ createApp({
             const aIsNo = noSet.has(aIdx);
             const bIsNo = noSet.has(bIdx);
             const st = m.stakes;
-            const Y1 = safeNumber(m.pair[0].yesOdds), N1 = safeNumber(m.pair[0].noOdds);
-            const Y2 = safeNumber(m.pair[1].yesOdds), N2 = safeNumber(m.pair[1].noOdds);
+            const Y1 = m.pair[0].yesOdds, N1 = m.pair[0].noOdds;
+            const Y2 = m.pair[1].yesOdds, N2 = m.pair[1].noOdds;
             let net = 0;
             if (!aIsNo && !bIsNo) net = st.yes1*(Y1-1) + st.yes2*(Y2-1) - (st.no1+st.no2+st.parlay);
             else if (!aIsNo && bIsNo) net = st.yes1*(Y1-1) + st.no2*(N2-1) - (st.yes2+st.no1+st.parlay);
@@ -258,7 +243,7 @@ createApp({
         }
       }
       const avg = {};
-      for (let k=0; k<=4; k++) avg[k] = results[k].reduce((a,b)=>a+b,0) / (results[k].length||1);
+      for (let k=0;k<=4;k++) avg[k] = results[k].reduce((a,b)=>a+b,0) / (results[k].length||1);
       return avg;
     }
 
@@ -266,7 +251,7 @@ createApp({
     function updateExpectedNetMap() { expectedNetMap.value = computeExpectedNetForNoCount(); }
     function updateNetFromNoCount() {
       const val = expectedNetMap.value[recordForm.noCount];
-      recordForm.netUSD = safeNumber(val);
+      if (val !== undefined) recordForm.netUSD = Math.round(val * 100) / 100;
     }
 
     watch(matrices, () => {
@@ -274,33 +259,56 @@ createApp({
       if (selectedDateStr.value && !records.value[selectedDateStr.value]) updateNetFromNoCount();
     });
 
-    // localStorage
+    // ---- records & localStorage ----
     function loadRecords() {
       const stored = localStorage.getItem("TiDynRecords");
-      if (stored) try { records.value = JSON.parse(stored); } catch(e) { records.value = {}; }
+      if (stored) records.value = JSON.parse(stored);
     }
-    function saveRecords() { localStorage.setItem("TiDynRecords", JSON.stringify(records.value)); }
+    function saveRecords() {
+      localStorage.setItem("TiDynRecords", JSON.stringify(records.value));
+      updateChart();
+    }
 
     const totalRounds = computed(() => Object.keys(records.value).length);
     const totalNetProfit = computed(() => {
       let sum = 0;
-      for (let k in records.value) sum += safeNumber(records.value[k].netUSD);
+      for (let k in records.value) sum += records.value[k].netUSD;
       return sum;
     });
     const avgProfit = computed(() => totalRounds.value ? totalNetProfit.value / totalRounds.value : 0);
     const bestDayProfit = computed(() => {
       let best = -Infinity;
-      for (let k in records.value) best = Math.max(best, safeNumber(records.value[k].netUSD));
+      for (let k in records.value) best = Math.max(best, records.value[k].netUSD);
       return best === -Infinity ? 0 : best;
     });
     const worstDayProfit = computed(() => {
       let worst = Infinity;
-      for (let k in records.value) worst = Math.min(worst, safeNumber(records.value[k].netUSD));
+      for (let k in records.value) worst = Math.min(worst, records.value[k].netUSD);
       return worst === Infinity ? 0 : worst;
     });
     const sortedRecords = computed(() => Object.entries(records.value).sort((a,b)=>new Date(b[0])-new Date(a[0])));
 
-    // Calendar
+    // ---- chart ----
+    function updateChart() {
+      if (!chartInstance && document.getElementById('profitChart')) {
+        const ctx = document.getElementById('profitChart').getContext('2d');
+        chartInstance = new Chart(ctx, {
+          type: 'line',
+          data: { labels: [], datasets: [{ label: 'Daily P/L ($)', data: [], borderColor: '#c5a059', tension: 0.2 }] },
+          options: { responsive: true, maintainAspectRatio: true }
+        });
+      }
+      if (chartInstance) {
+        const dates = Object.keys(records.value).sort();
+        const profits = dates.map(d => records.value[d].netUSD);
+        chartInstance.data.labels = dates;
+        chartInstance.data.datasets[0].data = profits;
+        chartInstance.update();
+      }
+    }
+    watch(records, () => updateChart(), { deep: true });
+
+    // ---- calendar helpers ----
     function getDaysInMonth(y,m) { return new Date(y, m+1, 0).getDate(); }
     function getFirstDayOffset(y,m) { let d = new Date(y,m,1).getDay(); return d === 0 ? 6 : d-1; }
     const calendarDays = computed(() => {
@@ -322,7 +330,7 @@ createApp({
       const rec = records.value[dateStr];
       if (rec) {
         recordForm.noCount = rec.noCount;
-        recordForm.netUSD = safeNumber(rec.netUSD);
+        recordForm.netUSD = rec.netUSD;
       } else {
         recordForm.noCount = 2;
         updateNetFromNoCount();
@@ -332,10 +340,11 @@ createApp({
       if (!selectedDateStr.value) return;
       records.value[selectedDateStr.value] = {
         noCount: recordForm.noCount,
-        netUSD: safeNumber(recordForm.netUSD)
+        netUSD: recordForm.netUSD
       };
       saveRecords();
-      generate(); // update stakes with new bankroll
+      // IMPORTANT: regenerate matrices so stakes use the new bankroll (compounding)
+      generate();
       selectedDateStr.value = null;
     }
     function clearRecord() {
@@ -354,20 +363,40 @@ createApp({
       else currentMonth.value++;
     }
 
+    function resetAndGenerate() {
+      // base bankroll changed: clear all records? We'll keep records but recalc stakes.
+      generate();
+    }
+
+    // ---- splash screen logic ----
     onMounted(() => {
       loadRecords();
-      generate();
+      setTimeout(() => {
+        const splash = document.getElementById("splash");
+        if (splash) {
+          splash.classList.add("hide");
+          setTimeout(() => {
+            if (splash.parentNode) splash.remove();
+            generate();
+            nextTick(() => updateChart());
+          }, 900);
+        } else {
+          generate();
+          nextTick(() => updateChart());
+        }
+      }, 2500);
     });
 
     return {
       state, matrices, records, selectedDateStr, recordForm,
       currentYear, currentMonth, monthNames, calendarDays,
-      matrixStake, currentBankroll, oddsWarning,
-      totalRounds, totalNetProfit, avgProfit, bestDayProfit, worstDayProfit, sortedRecords,
-      fmt, generate, selectDate, saveRecord, clearRecord, prevMonth, nextMonth, updateNetFromNoCount
+      matrixStake, currentBankroll, totalRounds, totalNetProfit,
+      avgProfit, bestDayProfit, worstDayProfit, sortedRecords,
+      fmt, generate, selectDate, saveRecord, clearRecord,
+      prevMonth, nextMonth, updateNetFromNoCount, resetAndGenerate
     };
   }
 }).mount("#app");
 </script>
 </body>
-  </html>
+           </html>
