@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TiDyn Matrix – Monthly Reinvestment (Fixed)</title>
+<title>TiDyn Matrix – Permanent Audit Trail</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -38,24 +38,24 @@
     <div class="text-2xl font-bold text-amber-400">TiDyn MATRIX v2.5</div>
     <div class="text-right">
       <div>Base bankroll: <span class="text-amber-400 font-bold">${{ fmt(state.bankroll) }}</span></div>
-      <div class="text-sm text-gray-400">Total bankroll (incl. month profit): ${{ fmt(currentBankroll) }}</div>
+      <div class="text-sm text-gray-400">Total bankroll (including all profits): ${{ fmt(currentBankroll) }}</div>
     </div>
   </div>
 
   <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
     <div class="stat-card"><div class="text-xs">Rounds this month</div><div class="text-xl">{{ monthlyRounds }}</div></div>
     <div class="stat-card"><div class="text-xs">Month profit</div><div class="text-xl" :class="monthNetProfit>=0?'text-green-400':'text-red-400'">${{ fmt(monthNetProfit) }}</div></div>
-    <div class="stat-card"><div class="text-xs">Avg / round</div><div class="text-xl" :class="avgProfit>=0?'text-green-400':'text-red-400'">${{ fmt(avgProfit) }}</div></div>
+    <div class="stat-card"><div class="text-xs">Avg / round (all time)</div><div class="text-xl" :class="avgProfit>=0?'text-green-400':'text-red-400'">${{ fmt(avgProfit) }}</div></div>
     <div class="stat-card"><div class="text-xs">Best / worst</div><div class="text-md">${{ fmt(bestDayProfit) }} / ${{ fmt(worstDayProfit) }}</div></div>
   </div>
 
   <div class="card mb-5 flex flex-wrap gap-4 items-end">
-    <div><div class="text-xs text-gray-400">Base bankroll (USD)</div><input type="number" v-model.number="state.bankroll" step="100" style="width:160px" @change="resetBankroll"/></div>
+    <div><div class="text-xs text-gray-400">Base bankroll (USD)</div><input type="number" v-model.number="state.bankroll" step="100" style="width:160px" @change="updateBaseBankroll"/></div>
     <div><div class="text-xs text-gray-400">Per matrix stake (2.78% of base)</div><div class="font-mono">${{ fmt(matrixStake) }}</div></div>
     <button class="btn-gold" @click="generate">⟳ Generate 6 Matrices</button>
     <button class="btn-secondary" @click="reinvestMonth">💰 Reinvest Month</button>
   </div>
-  <div class="tooltip mb-3">* Stake stays constant during the month. Click "Reinvest Month" to add month's profit to base bankroll and start fresh next month.</div>
+  <div class="tooltip mb-3">* Stake stays constant during the month. "Reinvest Month" adds this month's profit to the base bankroll (records stay forever).</div>
 
   <div class="card mb-5">
     <div class="text-sm font-semibold mb-2">Match odds (BTTS Yes live / No pre‑match)</div>
@@ -84,7 +84,7 @@
 
   <div v-if="matrices.length" class="card">
     <div class="flex flex-wrap justify-between items-center mb-3">
-      <b>📅 Round Tracker</b>
+      <b>📅 Round Tracker (all time)</b>
       <div class="flex gap-2">
         <button class="btn-secondary" @click="prevMonth">◀</button>
         <span class="px-3 py-1 bg-gray-800 rounded-full">{{ monthNames[currentMonth] }} {{ currentYear }}</span>
@@ -114,12 +114,12 @@
   </div>
 
   <div v-if="totalRounds > 1" class="card mt-5">
-    <div class="font-bold mb-2">📈 Daily profit evolution</div>
+    <div class="font-bold mb-2">📈 Daily profit evolution (all time)</div>
     <canvas id="profitChart" style="max-height: 280px; width:100%"></canvas>
   </div>
 
   <div v-if="Object.keys(records).length" class="card mt-5">
-    <div class="font-bold mb-2">📋 Recent rounds</div>
+    <div class="font-bold mb-2">📋 Complete round history (audit trail)</div>
     <div class="max-h-52 overflow-auto">
       <div v-for="([date, rec]) in sortedRecords" :key="date" class="flex justify-between border-b border-gray-800 py-2">
         <span class="font-mono text-sm">{{ date }}</span>
@@ -157,7 +157,7 @@ createApp({
 
     const fmt = (n) => Number(n).toFixed(2);
     
-    // Total bankroll = base + all profits (for display only)
+    // Total bankroll = base + sum of ALL records (historical)
     const currentBankroll = computed(() => {
       let sum = state.bankroll;
       for (let k in records.value) sum += records.value[k].netUSD;
@@ -209,24 +209,20 @@ createApp({
     });
     const sortedRecords = computed(() => Object.entries(records.value).sort((a,b)=>new Date(b[0])-new Date(a[0])));
 
-    // ---- reinvest month: add month's profit to base bankroll, then clear only this month's records
+    // ---- reinvest month: add month's profit to base bankroll, keep all records ----
     function reinvestMonth() {
       const profitThisMonth = monthNetProfit.value;
       if (profitThisMonth === 0) return;
       state.bankroll += profitThisMonth;
-      // Remove all records from current month
-      const now = new Date();
-      const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-      const newRecords = {};
-      for (let date in records.value) {
-        if (!date.startsWith(currentYearMonth)) {
-          newRecords[date] = records.value[date];
-        }
-      }
-      records.value = newRecords;
+      // Do NOT delete any records – they stay for audit.
       saveRecords();
       generate(); // regenerate matrices with new base bankroll
-      updateChart();
+    }
+
+    // ---- manual base bankroll change ----
+    function updateBaseBankroll() {
+      // Just change the base, no records touched. Regenerate to update stakes.
+      generate();
     }
 
     // ---- generate matrices using current matrixStake ----
@@ -390,7 +386,6 @@ createApp({
         netUSD: recordForm.netUSD
       };
       saveRecords();
-      // Do NOT regenerate matrices – stake stays based on base bankroll
       selectedDateStr.value = null;
     }
     function clearRecord() {
@@ -406,13 +401,6 @@ createApp({
     function nextMonth() {
       if (currentMonth.value === 11) { currentMonth.value = 0; currentYear.value++; }
       else currentMonth.value++;
-    }
-
-    function resetBankroll() {
-      // base bankroll changed manually – clear all records and regenerate
-      records.value = {};
-      saveRecords();
-      generate();
     }
 
     // ---- splash screen ----
@@ -442,10 +430,10 @@ createApp({
       monthlyRounds, monthNetProfit,
       fmt, generate, selectDate, saveRecord, clearRecord,
       prevMonth, nextMonth, updateNetFromNoCount,
-      reinvestMonth, resetBankroll
+      reinvestMonth, updateBaseBankroll
     };
   }
 }).mount("#app");
 </script>
 </body>
-  </html>
+                                                                              </html>
