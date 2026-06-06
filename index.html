@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TiDyn Matrix – Monthly Reinvestment</title>
+<title>TiDyn Matrix – Monthly Reinvestment (Fixed)</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -22,6 +22,7 @@
   .splash-screen.hide{opacity:0;pointer-events:none}
   .splash-logo{width:80%;max-width:400px;text-align:center;background:linear-gradient(135deg,#c5a059,#f5d97f);-webkit-background-clip:text;background-clip:text;color:transparent;font-size:3rem;font-weight:bold;font-family:monospace}
   .splash-logo span{display:block;font-size:1rem;color:#cbd5e1;background:none}
+  .tooltip{font-size:0.7rem;color:#9ca3af;margin-top:4px}
 </style>
 </head>
 <body>
@@ -35,11 +36,14 @@
 
   <div class="flex justify-between items-center border-b border-gray-800 pb-3 mb-5">
     <div class="text-2xl font-bold text-amber-400">TiDyn MATRIX v2.5</div>
-    <div>Bankroll: <span class="text-amber-400 font-bold">${{ fmt(currentBankroll) }}</span></div>
+    <div class="text-right">
+      <div>Base bankroll: <span class="text-amber-400 font-bold">${{ fmt(state.bankroll) }}</span></div>
+      <div class="text-sm text-gray-400">Total bankroll (incl. month profit): ${{ fmt(currentBankroll) }}</div>
+    </div>
   </div>
 
   <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-    <div class="stat-card"><div class="text-xs">Total rounds (this month)</div><div class="text-xl">{{ monthlyRounds }}</div></div>
+    <div class="stat-card"><div class="text-xs">Rounds this month</div><div class="text-xl">{{ monthlyRounds }}</div></div>
     <div class="stat-card"><div class="text-xs">Month profit</div><div class="text-xl" :class="monthNetProfit>=0?'text-green-400':'text-red-400'">${{ fmt(monthNetProfit) }}</div></div>
     <div class="stat-card"><div class="text-xs">Avg / round</div><div class="text-xl" :class="avgProfit>=0?'text-green-400':'text-red-400'">${{ fmt(avgProfit) }}</div></div>
     <div class="stat-card"><div class="text-xs">Best / worst</div><div class="text-md">${{ fmt(bestDayProfit) }} / ${{ fmt(worstDayProfit) }}</div></div>
@@ -47,10 +51,11 @@
 
   <div class="card mb-5 flex flex-wrap gap-4 items-end">
     <div><div class="text-xs text-gray-400">Base bankroll (USD)</div><input type="number" v-model.number="state.bankroll" step="100" style="width:160px" @change="resetBankroll"/></div>
-    <div><div class="text-xs text-gray-400">Per matrix stake (2.78% of bankroll)</div><div class="font-mono">${{ fmt(matrixStake) }}</div></div>
+    <div><div class="text-xs text-gray-400">Per matrix stake (2.78% of base)</div><div class="font-mono">${{ fmt(matrixStake) }}</div></div>
     <button class="btn-gold" @click="generate">⟳ Generate 6 Matrices</button>
     <button class="btn-secondary" @click="reinvestMonth">💰 Reinvest Month</button>
   </div>
+  <div class="tooltip mb-3">* Stake stays constant during the month. Click "Reinvest Month" to add month's profit to base bankroll and start fresh next month.</div>
 
   <div class="card mb-5">
     <div class="text-sm font-semibold mb-2">Match odds (BTTS Yes live / No pre‑match)</div>
@@ -152,22 +157,21 @@ createApp({
 
     const fmt = (n) => Number(n).toFixed(2);
     
-    // Current bankroll = base bankroll + net profit of ALL rounds (historical)
+    // Total bankroll = base + all profits (for display only)
     const currentBankroll = computed(() => {
       let sum = state.bankroll;
       for (let k in records.value) sum += records.value[k].netUSD;
       return sum;
     });
     
-    // Per matrix stake = 2.78% of base bankroll (not including current month's profit)
-    // This ensures stakes stay constant during the month.
+    // Per matrix stake = 2.78% of BASE bankroll (constant during month)
     const matrixStake = computed(() => {
       const base = state.bankroll;
       if (base <= 0) return 0;
       return base * 0.0278;
     });
 
-    // Monthly stats: only rounds in the current month (based on calendar month)
+    // Monthly stats: rounds in current calendar month
     const monthlyRounds = computed(() => {
       const now = new Date();
       const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
@@ -205,7 +209,7 @@ createApp({
     });
     const sortedRecords = computed(() => Object.entries(records.value).sort((a,b)=>new Date(b[0])-new Date(a[0])));
 
-    // ---- reinvest month: add month's profit to base bankroll, then delete all records from this month
+    // ---- reinvest month: add month's profit to base bankroll, then clear only this month's records
     function reinvestMonth() {
       const profitThisMonth = monthNetProfit.value;
       if (profitThisMonth === 0) return;
@@ -221,11 +225,11 @@ createApp({
       }
       records.value = newRecords;
       saveRecords();
-      generate(); // regenerate matrices with new bankroll
+      generate(); // regenerate matrices with new base bankroll
       updateChart();
     }
 
-    // ---- other functions (generate, solver, etc.) same as before ----
+    // ---- generate matrices using current matrixStake ----
     function generatePairs() {
       const pairs = [];
       for (let i = 0; i < state.matches.length; i++) {
@@ -268,6 +272,7 @@ createApp({
       updateExpectedNetMap();
     }
 
+    // ---- expected net for each No count ----
     function computeExpectedNetForNoCount() {
       if (matrices.value.length === 0) return {0:0,1:0,2:0,3:0,4:0};
       const combos = {0:[[]],1:[],2:[],3:[],4:[[0,1,2,3]]};
@@ -320,7 +325,7 @@ createApp({
       if (selectedDateStr.value && !records.value[selectedDateStr.value]) updateNetFromNoCount();
     });
 
-    // ---- records & localStorage ----
+    // ---- localStorage ----
     function loadRecords() {
       const stored = localStorage.getItem("TiDynRecords");
       if (stored) records.value = JSON.parse(stored);
@@ -385,7 +390,7 @@ createApp({
         netUSD: recordForm.netUSD
       };
       saveRecords();
-      // Do NOT regenerate matrices here – stakes remain based on base bankroll
+      // Do NOT regenerate matrices – stake stays based on base bankroll
       selectedDateStr.value = null;
     }
     function clearRecord() {
