@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TiDyn Matrix – Period Reset + Audit</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>TiDyn Matrix – Full Dashboard</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -11,52 +11,51 @@
   body{background:#0b0c10;color:#e5e7eb;font-family:system-ui}
   [v-cloak]{display:none}
   .card{background:#111318;border:1px solid #1e2229;border-radius:16px;padding:1rem}
-  .btn-gold{background:#c5a059;color:#0b0c10;font-weight:700;padding:8px 16px;border-radius:40px;cursor:pointer}
+  .btn-gold{background:#c5a059;color:#0b0c10;font-weight:700;padding:6px 12px;border-radius:40px;cursor:pointer}
   .btn-secondary{background:#1e293b;color:#cbd5e1;padding:6px 12px;border-radius:30px;cursor:pointer}
   input,select{background:#0b0c10;border:1px solid #2a3342;border-radius:12px;padding:8px;color:white}
   .calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
   .calendar-day{background:#0f121b;border-radius:12px;padding:8px;text-align:center;cursor:pointer}
   .has-record{background:#2a2a1c;border:1px solid #c5a059;color:#ffd966}
   .stat-card{background:#0a0e16;border-radius:20px;padding:12px;text-align:center}
-  .splash-screen{position:fixed;top:0;left:0;width:100%;height:100%;background:#000;z-index:99999;display:flex;justify-content:center;align-items:center;opacity:1;transition:opacity 1s ease}
-  .splash-screen.hide{opacity:0;pointer-events:none}
-  .splash-logo{width:80%;max-width:400px;text-align:center;background:linear-gradient(135deg,#c5a059,#f5d97f);-webkit-background-clip:text;background-clip:text;color:transparent;font-size:3rem;font-weight:bold;font-family:monospace}
-  .splash-logo span{display:block;font-size:1rem;color:#cbd5e1;background:none}
+  .kpi-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+  .kpi-item{background:#111318;border-radius:12px;padding:8px;flex:1;min-width:100px;text-align:center}
   .tooltip{font-size:0.7rem;color:#9ca3af;margin-top:4px}
 </style>
 </head>
 <body>
-
-<div class="splash-screen" id="splash">
-  <div class="splash-logo">TiDyn<br><span>multiverse matrix</span></div>
-</div>
-
 <div id="app" v-cloak>
 <div class="max-w-7xl mx-auto px-4 py-4">
 
+  <!-- Header -->
   <div class="flex justify-between items-center border-b border-gray-800 pb-3 mb-5">
     <div class="text-2xl font-bold text-amber-400">TiDyn MATRIX v2.5</div>
     <div class="text-right">
       <div>Base bankroll: <span class="text-amber-400 font-bold">${{ fmt(state.bankroll) }}</span></div>
-      <div class="text-sm text-gray-400">Total bankroll (including all profits): ${{ fmt(currentBankroll) }}</div>
+      <div class="text-sm text-gray-400">Total bankroll (incl. profits): ${{ fmt(totalBankroll) }}</div>
     </div>
   </div>
 
-  <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-    <div class="stat-card"><div class="text-xs">Period rounds (since last reinvest)</div><div class="text-xl">{{ periodRounds }}</div></div>
-    <div class="stat-card"><div class="text-xs">Period profit</div><div class="text-xl" :class="periodProfit>=0?'text-green-400':'text-red-400'">${{ fmt(periodProfit) }}</div></div>
-    <div class="stat-card"><div class="text-xs">Avg / round (all time)</div><div class="text-xl" :class="avgProfit>=0?'text-green-400':'text-red-400'">${{ fmt(avgProfit) }}</div></div>
-    <div class="stat-card"><div class="text-xs">Best / worst day</div><div class="text-md">${{ fmt(bestDayProfit) }} / ${{ fmt(worstDayProfit) }}</div></div>
+  <!-- KPI Row (same as Kotlin) -->
+  <div class="kpi-row">
+    <div class="kpi-item"><div class="text-xs text-gray-400">Period rounds</div><div class="text-lg font-bold">{{ periodRounds }}</div></div>
+    <div class="kpi-item"><div class="text-xs text-gray-400">Period profit</div><div class="text-lg font-bold" :class="periodProfit>=0?'text-green-400':'text-red-400'">${{ fmt(periodProfit) }}</div></div>
+    <div class="kpi-item"><div class="text-xs text-gray-400">Avg / round</div><div class="text-lg font-bold" :class="avgProfit>=0?'text-green-400':'text-red-400'">${{ fmt(avgProfit) }}</div></div>
+    <div class="kpi-item"><div class="text-xs text-gray-400">Best / worst</div><div class="text-md font-bold">${{ fmt(bestDay) }} / ${{ fmt(worstDay) }}</div></div>
+    <div class="kpi-item"><div class="text-xs text-gray-400">Total profit</div><div class="text-lg font-bold" :class="totalProfit>=0?'text-green-400':'text-red-400'">${{ fmt(totalProfit) }}</div></div>
+    <div class="kpi-item"><div class="text-xs text-gray-400">Total ROI</div><div class="text-lg font-bold" :class="roi>=0?'text-green-400':'text-red-400'">{{ roi>=0?'+':'' }}{{ fmt(roi) }}%</div></div>
   </div>
 
+  <!-- Controls -->
   <div class="card mb-5 flex flex-wrap gap-4 items-end">
-    <div><div class="text-xs text-gray-400">Base bankroll (USD)</div><input type="number" v-model.number="state.bankroll" step="100" style="width:160px" @change="updateBaseBankroll"/></div>
+    <div><div class="text-xs text-gray-400">Base bankroll (USD)</div><input type="number" v-model.number="state.bankroll" step="100" style="width:160px" @change="resetBase"/></div>
     <div><div class="text-xs text-gray-400">Per matrix stake (2.78% of base)</div><div class="font-mono">${{ fmt(matrixStake) }}</div></div>
     <button class="btn-gold" @click="generate">⟳ Generate 6 Matrices</button>
     <button class="btn-secondary" @click="reinvestPeriod">💰 Reinvest Period</button>
   </div>
   <div class="tooltip mb-3">* Stake stays constant during the period. "Reinvest Period" adds period profit to base bankroll and resets period stats (records stay forever).</div>
 
+  <!-- Odds inputs -->
   <div class="card mb-5">
     <div class="text-sm font-semibold mb-2">Match odds (BTTS Yes live / No pre‑match)</div>
     <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -66,8 +65,10 @@
         <div class="text-xs mt-1">No (pre) <input type="number" step="0.01" v-model.number="m.noOdds" class="mt-1" @change="generate"/></div>
       </div>
     </div>
+    <div v-if="oddsWarning" class="text-red-400 text-xs mt-2">⚠️ Odds must be >1. Stakes may be zero.</div>
   </div>
 
+  <!-- 6 Matrices (same as before) -->
   <div v-if="matrices.length" class="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
     <div v-for="(m,idx) in matrices" :key="idx" class="card border-l-4 border-l-amber-600">
       <div class="flex justify-between"><b>{{ m.pair[0].name }} – {{ m.pair[1].name }}</b><span class="text-xs">No/No parlay: {{ m.parlayOdds.toFixed(2) }}x</span></div>
@@ -82,7 +83,8 @@
     </div>
   </div>
 
-  <div v-if="matrices.length" class="card">
+  <!-- Calendar Tracker -->
+  <div class="card">
     <div class="flex flex-wrap justify-between items-center mb-3">
       <b>📅 Round Tracker (all time)</b>
       <div class="flex gap-2">
@@ -104,7 +106,7 @@
           <input type="number" v-model.number="recordForm.noCount" min="0" max="4" style="width:90px" @change="updateNetFromNoCount"/>
         </div>
         <div><div class="text-xs">Net P/L (USD)</div>
-          <input type="number" v-model.number="recordForm.netUSD" style="width:120px"/>
+          <input type="number" v-model.number="recordForm.netUSD" style="width:120px" step="0.01"/>
         </div>
         <button class="btn-gold py-1 px-4" @click="saveRecord">Save</button>
         <button class="btn-secondary py-1 px-4" @click="clearRecord">Delete</button>
@@ -113,11 +115,13 @@
     </div>
   </div>
 
-  <div v-if="totalRounds > 1" class="card mt-5">
+  <!-- Chart -->
+  <div v-if="Object.keys(records).length > 1" class="card mt-5">
     <div class="font-bold mb-2">📈 Daily profit evolution (all time)</div>
     <canvas id="profitChart" style="max-height: 280px; width:100%"></canvas>
   </div>
 
+  <!-- History log -->
   <div v-if="Object.keys(records).length" class="card mt-5">
     <div class="font-bold mb-2">📋 Complete round history (audit trail)</div>
     <div class="max-h-52 overflow-auto">
@@ -148,10 +152,9 @@ createApp({
     });
     const matrices = ref([]);
     const records = ref({});
-    // Period tracking (since last reinvest)
+    // Period stats (reset on reinvest)
     const periodProfit = ref(0);
     const periodRounds = ref(0);
-    
     const selectedDateStr = ref(null);
     const recordForm = reactive({ noCount: 2, netUSD: 0 });
     const currentYear = ref(new Date().getFullYear());
@@ -159,125 +162,125 @@ createApp({
     const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
     let chartInstance = null;
 
-    const fmt = (n) => Number(n).toFixed(2);
-    
-    // Total bankroll = base + sum of ALL records (historical)
-    const currentBankroll = computed(() => {
-      let sum = state.bankroll;
-      for (let k in records.value) sum += records.value[k].netUSD;
+    const safeNum = (val, def=0) => { let n = Number(val); return isNaN(n) ? def : n; };
+    const fmt = n => safeNum(n).toFixed(2);
+
+    // Computed totals
+    const totalBankroll = computed(() => {
+      let sum = safeNum(state.bankroll);
+      for (let k in records.value) sum += safeNum(records.value[k].netUSD);
       return sum;
     });
-    
-    // Per matrix stake = 2.78% of BASE bankroll (constant during period)
+    const totalProfit = computed(() => {
+      let sum = 0;
+      for (let k in records.value) sum += safeNum(records.value[k].netUSD);
+      return sum;
+    });
+    const totalRounds = computed(() => Object.keys(records.value).length);
+    const avgProfit = computed(() => totalRounds.value ? totalProfit.value / totalRounds.value : 0);
+    const bestDay = computed(() => {
+      let best = -Infinity;
+      for (let k in records.value) best = Math.max(best, safeNum(records.value[k].netUSD));
+      return best === -Infinity ? 0 : best;
+    });
+    const worstDay = computed(() => {
+      let worst = Infinity;
+      for (let k in records.value) worst = Math.min(worst, safeNum(records.value[k].netUSD));
+      return worst === Infinity ? 0 : worst;
+    });
+    const roi = computed(() => {
+      if (state.bankroll <= 0) return 0;
+      return (totalProfit.value / state.bankroll) * 100;
+    });
     const matrixStake = computed(() => {
-      const base = state.bankroll;
+      const base = safeNum(state.bankroll);
       if (base <= 0) return 0;
       return base * 0.0278;
     });
+    const oddsWarning = computed(() => state.matches.some(m => m.yesOdds <= 1 || m.noOdds <= 1));
 
-    // All-time stats
-    const totalRounds = computed(() => Object.keys(records.value).length);
-    const totalNetProfit = computed(() => {
-      let sum = 0;
-      for (let k in records.value) sum += records.value[k].netUSD;
-      return sum;
-    });
-    const avgProfit = computed(() => totalRounds.value ? totalNetProfit.value / totalRounds.value : 0);
-    const bestDayProfit = computed(() => {
-      let best = -Infinity;
-      for (let k in records.value) best = Math.max(best, records.value[k].netUSD);
-      return best === -Infinity ? 0 : best;
-    });
-    const worstDayProfit = computed(() => {
-      let worst = Infinity;
-      for (let k in records.value) worst = Math.min(worst, records.value[k].netUSD);
-      return worst === Infinity ? 0 : worst;
-    });
-    const sortedRecords = computed(() => Object.entries(records.value).sort((a,b)=>new Date(b[0])-new Date(a[0])));
-
-    // ---- reinvest period: add period profit to base bankroll, reset period stats ----
-    function reinvestPeriod() {
-      if (periodProfit.value === 0) return;
-      state.bankroll += periodProfit.value;
-      periodProfit.value = 0;
-      periodRounds.value = 0;
-      savePeriodStats();
-      generate(); // regenerate matrices with new base bankroll
-    }
-
-    // ---- manual base bankroll change (e.g., editing input) ----
-    function updateBaseBankroll() {
-      generate();
-    }
-
-    // ---- save period stats to localStorage ----
-    function savePeriodStats() {
-      localStorage.setItem("TiDynPeriodProfit", periodProfit.value);
-      localStorage.setItem("TiDynPeriodRounds", periodRounds.value);
-    }
-    function loadPeriodStats() {
-      const pProfit = localStorage.getItem("TiDynPeriodProfit");
-      const pRounds = localStorage.getItem("TiDynPeriodRounds");
-      if (pProfit !== null) periodProfit.value = Number(pProfit);
-      if (pRounds !== null) periodRounds.value = Number(pRounds);
-    }
-
-    // ---- generate matrices ----
-    function generatePairs() {
-      const pairs = [];
-      for (let i = 0; i < state.matches.length; i++) {
-        for (let j = i+1; j < state.matches.length; j++) {
-          pairs.push([state.matches[i], state.matches[j]]);
+    // ---------- Exact 5x5 solver ----------
+    function solveMatrixExact(mA, mB, S) {
+      S = safeNum(S);
+      if (S <= 0) return { yes1:0, yes2:0, no1:0, no2:0, parlay:0, total:0 };
+      const Y1 = safeNum(mA.yesOdds, 1.01);
+      const N1 = safeNum(mA.noOdds, 1.01);
+      const Y2 = safeNum(mB.yesOdds, 1.01);
+      const N2 = safeNum(mB.noOdds, 1.01);
+      if (Y1 <= 1 || N1 <= 1 || Y2 <= 1 || N2 <= 1) return { yes1:0, yes2:0, no1:0, no2:0, parlay:0, total:0 };
+      const A = [
+        [ Y1-1, Y2-1, -1, -1, -1 ],
+        [ Y1-1, -1, -1, N2-1, -1 ],
+        [ -1, Y2-1, N1-1, -1, -1 ],
+        [ -1, -1, N1-1, N2-1, N1*N2-1 ],
+        [ 1, 1, 1, 1, 1 ]
+      ];
+      const B = [ -0.3*S, -0.3*S, -0.3*S, 2.25*S, S ];
+      const n = 5;
+      let M = A.map(row => [...row]);
+      let R = [...B];
+      for (let i = 0; i < n; i++) {
+        let maxRow = i;
+        for (let k = i+1; k < n; k++) if (Math.abs(M[k][i]) > Math.abs(M[maxRow][i])) maxRow = k;
+        [M[i], M[maxRow]] = [M[maxRow], M[i]];
+        [R[i], R[maxRow]] = [R[maxRow], R[i]];
+        for (let k = i+1; k < n; k++) {
+          const factor = M[k][i] / M[i][i];
+          for (let j = i; j < n; j++) M[k][j] -= factor * M[i][j];
+          R[k] -= factor * R[i];
         }
       }
-      return pairs;
-    }
-
-    function solveMatrix(mA, mB, S) {
-      if (S <= 0) return { yes1:0, yes2:0, no1:0, no2:0, parlay:0, total:0 };
-      const Y1 = mA.yesOdds - 1;
-      const Y2 = mB.yesOdds - 1;
-      const L = 0.3 * S;
-      const denom = mA.yesOdds + mB.yesOdds;
-      let a = (0.7 * S) / denom;
-      let b = a;
-      let c = a * (mA.yesOdds / mA.noOdds);
-      let d = b * (mB.yesOdds / mB.noOdds);
-      let e = a*Y1 + b*Y2 + L - c - d;
-      if (isNaN(e) || e < 0) e = 0;
+      const X = new Array(n).fill(0);
+      for (let i = n-1; i >= 0; i--) {
+        let sum = 0;
+        for (let j = i+1; j < n; j++) sum += M[i][j] * X[j];
+        X[i] = (R[i] - sum) / M[i][i];
+      }
+      let [a,b,c,d,e] = X;
+      a = Math.max(0,a); b = Math.max(0,b); c = Math.max(0,c); d = Math.max(0,d); e = Math.max(0,e);
+      const total = a+b+c+d+e;
+      if (total > 0 && Math.abs(total - S) > 0.01) {
+        const factor = S / total;
+        a *= factor; b *= factor; c *= factor; d *= factor; e *= factor;
+      }
       return { yes1: a, yes2: b, no1: c, no2: d, parlay: e, total: a+b+c+d+e };
     }
 
+    function generatePairs() {
+      const pairs = [];
+      for (let i = 0; i < state.matches.length; i++)
+        for (let j = i+1; j < state.matches.length; j++)
+          pairs.push([state.matches[i], state.matches[j]]);
+      return pairs;
+    }
+
     function generate() {
-      const S = matrixStake.value;
-      if (S <= 0) {
+      if (oddsWarning.value || matrixStake.value <= 0) {
         matrices.value = [];
         return;
       }
+      const S = matrixStake.value;
       const pairs = generatePairs();
       const newMatrices = [];
       for (let [mA, mB] of pairs) {
-        const stakes = solveMatrix(mA, mB, S);
-        const parlayOdds = mA.noOdds * mB.noOdds;
+        const stakes = solveMatrixExact(mA, mB, S);
+        const parlayOdds = safeNum(mA.noOdds) * safeNum(mB.noOdds);
         newMatrices.push({ pair: [mA, mB], parlayOdds, stakes });
       }
       matrices.value = newMatrices;
       updateExpectedNetMap();
     }
 
-    // ---- expected net for each No count ----
-    function computeExpectedNetForNoCount() {
+    // Expected net for each No count (0-4)
+    function computeExpectedNetMap() {
       if (matrices.value.length === 0) return {0:0,1:0,2:0,3:0,4:0};
-      const combos = {0:[[]],1:[],2:[],3:[],4:[[0,1,2,3]]};
-      for (let k=1; k<=3; k++) {
-        const res = [];
-        const backtrack = (start, curr) => {
-          if (curr.length === k) { res.push([...curr]); return; }
-          for (let i=start; i<4; i++) { curr.push(i); backtrack(i+1, curr); curr.pop(); }
-        };
-        backtrack(0, []);
-        combos[k] = res;
-      }
+      const combos = {
+        0: [[]],
+        1: [[0],[1],[2],[3]],
+        2: [[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]],
+        3: [[0,1,2],[0,1,3],[0,2,3],[1,2,3]],
+        4: [[0,1,2,3]]
+      };
       const results = {0:[],1:[],2:[],3:[],4:[]};
       for (let k=0; k<=4; k++) {
         for (let combo of combos[k]) {
@@ -289,8 +292,8 @@ createApp({
             const aIsNo = noSet.has(aIdx);
             const bIsNo = noSet.has(bIdx);
             const st = m.stakes;
-            const Y1 = m.pair[0].yesOdds, N1 = m.pair[0].noOdds;
-            const Y2 = m.pair[1].yesOdds, N2 = m.pair[1].noOdds;
+            const Y1 = safeNum(m.pair[0].yesOdds), N1 = safeNum(m.pair[0].noOdds);
+            const Y2 = safeNum(m.pair[1].yesOdds), N2 = safeNum(m.pair[1].noOdds);
             let net = 0;
             if (!aIsNo && !bIsNo) net = st.yes1*(Y1-1) + st.yes2*(Y2-1) - (st.no1+st.no2+st.parlay);
             else if (!aIsNo && bIsNo) net = st.yes1*(Y1-1) + st.no2*(N2-1) - (st.yes2+st.no1+st.parlay);
@@ -305,12 +308,11 @@ createApp({
       for (let k=0;k<=4;k++) avg[k] = results[k].reduce((a,b)=>a+b,0) / (results[k].length||1);
       return avg;
     }
-
     const expectedNetMap = ref({0:0,1:0,2:0,3:0,4:0});
-    function updateExpectedNetMap() { expectedNetMap.value = computeExpectedNetForNoCount(); }
+    function updateExpectedNetMap() { expectedNetMap.value = computeExpectedNetMap(); }
     function updateNetFromNoCount() {
       const val = expectedNetMap.value[recordForm.noCount];
-      if (val !== undefined) recordForm.netUSD = Math.round(val * 100) / 100;
+      recordForm.netUSD = safeNum(val);
     }
 
     watch(matrices, () => {
@@ -318,52 +320,36 @@ createApp({
       if (selectedDateStr.value && !records.value[selectedDateStr.value]) updateNetFromNoCount();
     });
 
-    // ---- records & localStorage ----
-    function loadRecords() {
-      const stored = localStorage.getItem("TiDynRecords");
-      if (stored) records.value = JSON.parse(stored);
+    // localStorage & period stats
+    function loadData() {
+      const storedRecords = localStorage.getItem("TiDynRecords");
+      if (storedRecords) records.value = JSON.parse(storedRecords);
+      const storedPeriodProfit = localStorage.getItem("TiDynPeriodProfit");
+      const storedPeriodRounds = localStorage.getItem("TiDynPeriodRounds");
+      if (storedPeriodProfit !== null) periodProfit.value = safeNum(storedPeriodProfit);
+      if (storedPeriodRounds !== null) periodRounds.value = safeNum(storedPeriodRounds);
     }
-    function saveRecords() {
+    function saveData() {
       localStorage.setItem("TiDynRecords", JSON.stringify(records.value));
+      localStorage.setItem("TiDynPeriodProfit", periodProfit.value);
+      localStorage.setItem("TiDynPeriodRounds", periodRounds.value);
       updateChart();
     }
 
-    // ---- chart ----
-    function updateChart() {
-      if (!chartInstance && document.getElementById('profitChart')) {
-        const ctx = document.getElementById('profitChart').getContext('2d');
-        chartInstance = new Chart(ctx, {
-          type: 'line',
-          data: { labels: [], datasets: [{ label: 'Daily P/L ($)', data: [], borderColor: '#c5a059', tension: 0.2 }] },
-          options: { responsive: true, maintainAspectRatio: true, plugins: { tooltip: { callbacks: { label: (ctx) => `$${ctx.raw.toFixed(2)}` } } } }
-        });
-      }
-      if (chartInstance) {
-        const dates = Object.keys(records.value).sort();
-        const profits = dates.map(d => records.value[d].netUSD);
-        chartInstance.data.labels = dates;
-        chartInstance.data.datasets[0].data = profits;
-        chartInstance.update();
-      }
+    function reinvestPeriod() {
+      if (periodProfit.value === 0) return;
+      state.bankroll += periodProfit.value;
+      periodProfit.value = 0;
+      periodRounds.value = 0;
+      saveData();
+      generate();
     }
-    watch(records, () => updateChart(), { deep: true });
+    function resetBase() {
+      // base bankroll changed manually – keep records, but regenerate stakes
+      generate();
+    }
 
-    // ---- calendar helpers ----
-    function getDaysInMonth(y,m) { return new Date(y, m+1, 0).getDate(); }
-    function getFirstDayOffset(y,m) { let d = new Date(y,m,1).getDay(); return d === 0 ? 6 : d-1; }
-    const calendarDays = computed(() => {
-      const y = currentYear.value, m = currentMonth.value;
-      const daysInMonth = getDaysInMonth(y,m);
-      const offset = getFirstDayOffset(y,m);
-      let days = [];
-      for (let i=0; i<offset; i++) days.push({ dayNum: null, dateStr: null, hasRecord: false, id: `e-${i}` });
-      for (let d=1; d<=daysInMonth; d++) {
-        const dateStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-        days.push({ dayNum: d, dateStr, hasRecord: !!records.value[dateStr], id: dateStr });
-      }
-      return days;
-    });
-
+    // Record management
     function selectDate(dateStr) {
       if (!dateStr) return;
       selectedDateStr.value = dateStr;
@@ -378,30 +364,50 @@ createApp({
     }
     function saveRecord() {
       if (!selectedDateStr.value) return;
-      const net = recordForm.netUSD;
+      const net = safeNum(recordForm.netUSD);
+      const existing = records.value[selectedDateStr.value];
+      if (!existing) {
+        periodProfit.value += net;
+        periodRounds.value++;
+      } else {
+        const diff = net - existing.netUSD;
+        periodProfit.value += diff;
+        // periodRounds unchanged
+      }
       records.value[selectedDateStr.value] = {
         noCount: recordForm.noCount,
         netUSD: net
       };
-      // Update period stats
-      periodProfit.value += net;
-      periodRounds.value++;
-      savePeriodStats();
-      saveRecords();
+      saveData();
       selectedDateStr.value = null;
     }
     function clearRecord() {
       if (!selectedDateStr.value) return;
-      const oldRec = records.value[selectedDateStr.value];
-      if (oldRec) {
-        periodProfit.value -= oldRec.netUSD;
+      const old = records.value[selectedDateStr.value];
+      if (old) {
+        periodProfit.value -= old.netUSD;
         periodRounds.value--;
-        savePeriodStats();
       }
       delete records.value[selectedDateStr.value];
-      saveRecords();
+      saveData();
       selectedDateStr.value = null;
     }
+
+    // Calendar helpers
+    function getDaysInMonth(y,m) { return new Date(y, m+1, 0).getDate(); }
+    function getFirstDayOffset(y,m) { let d = new Date(y,m,1).getDay(); return d === 0 ? 6 : d-1; }
+    const calendarDays = computed(() => {
+      const y = currentYear.value, m = currentMonth.value;
+      const daysInMonth = getDaysInMonth(y,m);
+      const offset = getFirstDayOffset(y,m);
+      let days = [];
+      for (let i=0; i<offset; i++) days.push({ dayNum: null, dateStr: null, hasRecord: false, id: `e-${i}` });
+      for (let d=1; d<=daysInMonth; d++) {
+        const dateStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        days.push({ dayNum: d, dateStr, hasRecord: !!records.value[dateStr], id: dateStr });
+      }
+      return days;
+    });
     function prevMonth() {
       if (currentMonth.value === 0) { currentMonth.value = 11; currentYear.value--; }
       else currentMonth.value--;
@@ -411,38 +417,18 @@ createApp({
       else currentMonth.value++;
     }
 
-    // ---- splash screen ----
-    onMounted(() => {
-      loadRecords();
-      loadPeriodStats();
-      setTimeout(() => {
-        const splash = document.getElementById("splash");
-        if (splash) {
-          splash.classList.add("hide");
-          setTimeout(() => {
-            if (splash.parentNode) splash.remove();
-            generate();
-            nextTick(() => updateChart());
-          }, 900);
-        } else {
-          generate();
-          nextTick(() => updateChart());
-        }
-      }, 2500);
-    });
-
-    return {
-      state, matrices, records, selectedDateStr, recordForm,
-      currentYear, currentMonth, monthNames, calendarDays,
-      matrixStake, currentBankroll, totalRounds, totalNetProfit,
-      avgProfit, bestDayProfit, worstDayProfit, sortedRecords,
-      periodProfit, periodRounds,
-      fmt, generate, selectDate, saveRecord, clearRecord,
-      prevMonth, nextMonth, updateNetFromNoCount,
-      reinvestPeriod, updateBaseBankroll
-    };
-  }
-}).mount("#app");
-</script>
-</body>
-  </html>
+    // Chart
+    function updateChart() {
+      if (!chartInstance && document.getElementById('profitChart')) {
+        const ctx = document.getElementById('profitChart').getContext('2d');
+        chartInstance = new Chart(ctx, {
+          type: 'line',
+          data: { labels: [], datasets: [{ label: 'Daily P/L ($)', data: [], borderColor: '#c5a059', tension: 0.2 }] },
+          options: { responsive: true, maintainAspectRatio: true }
+        });
+      }
+      if (chartInstance) {
+        const dates = Object.keys(records.value).sort();
+        const profits = dates.map(d => safeNum(records.value[d].netUSD));
+        chartInstance.data.labels = dates;
+        chartInstance.data.datasets[0].data = profits
