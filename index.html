@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TiDyn Matrix – Permanent Audit Trail</title>
+<title>TiDyn Matrix – Period Reset + Audit</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -43,19 +43,19 @@
   </div>
 
   <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-    <div class="stat-card"><div class="text-xs">Rounds this month</div><div class="text-xl">{{ monthlyRounds }}</div></div>
-    <div class="stat-card"><div class="text-xs">Month profit</div><div class="text-xl" :class="monthNetProfit>=0?'text-green-400':'text-red-400'">${{ fmt(monthNetProfit) }}</div></div>
+    <div class="stat-card"><div class="text-xs">Period rounds (since last reinvest)</div><div class="text-xl">{{ periodRounds }}</div></div>
+    <div class="stat-card"><div class="text-xs">Period profit</div><div class="text-xl" :class="periodProfit>=0?'text-green-400':'text-red-400'">${{ fmt(periodProfit) }}</div></div>
     <div class="stat-card"><div class="text-xs">Avg / round (all time)</div><div class="text-xl" :class="avgProfit>=0?'text-green-400':'text-red-400'">${{ fmt(avgProfit) }}</div></div>
-    <div class="stat-card"><div class="text-xs">Best / worst</div><div class="text-md">${{ fmt(bestDayProfit) }} / ${{ fmt(worstDayProfit) }}</div></div>
+    <div class="stat-card"><div class="text-xs">Best / worst day</div><div class="text-md">${{ fmt(bestDayProfit) }} / ${{ fmt(worstDayProfit) }}</div></div>
   </div>
 
   <div class="card mb-5 flex flex-wrap gap-4 items-end">
     <div><div class="text-xs text-gray-400">Base bankroll (USD)</div><input type="number" v-model.number="state.bankroll" step="100" style="width:160px" @change="updateBaseBankroll"/></div>
     <div><div class="text-xs text-gray-400">Per matrix stake (2.78% of base)</div><div class="font-mono">${{ fmt(matrixStake) }}</div></div>
     <button class="btn-gold" @click="generate">⟳ Generate 6 Matrices</button>
-    <button class="btn-secondary" @click="reinvestMonth">💰 Reinvest Month</button>
+    <button class="btn-secondary" @click="reinvestPeriod">💰 Reinvest Period</button>
   </div>
-  <div class="tooltip mb-3">* Stake stays constant during the month. "Reinvest Month" adds this month's profit to the base bankroll (records stay forever).</div>
+  <div class="tooltip mb-3">* Stake stays constant during the period. "Reinvest Period" adds period profit to base bankroll and resets period stats (records stay forever).</div>
 
   <div class="card mb-5">
     <div class="text-sm font-semibold mb-2">Match odds (BTTS Yes live / No pre‑match)</div>
@@ -148,6 +148,10 @@ createApp({
     });
     const matrices = ref([]);
     const records = ref({});
+    // Period tracking (since last reinvest)
+    const periodProfit = ref(0);
+    const periodRounds = ref(0);
+    
     const selectedDateStr = ref(null);
     const recordForm = reactive({ noCount: 2, netUSD: 0 });
     const currentYear = ref(new Date().getFullYear());
@@ -164,32 +168,14 @@ createApp({
       return sum;
     });
     
-    // Per matrix stake = 2.78% of BASE bankroll (constant during month)
+    // Per matrix stake = 2.78% of BASE bankroll (constant during period)
     const matrixStake = computed(() => {
       const base = state.bankroll;
       if (base <= 0) return 0;
       return base * 0.0278;
     });
 
-    // Monthly stats: rounds in current calendar month
-    const monthlyRounds = computed(() => {
-      const now = new Date();
-      const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-      let count = 0;
-      for (let date in records.value) {
-        if (date.startsWith(currentYearMonth)) count++;
-      }
-      return count;
-    });
-    const monthNetProfit = computed(() => {
-      const now = new Date();
-      const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-      let sum = 0;
-      for (let date in records.value) {
-        if (date.startsWith(currentYearMonth)) sum += records.value[date].netUSD;
-      }
-      return sum;
-    });
+    // All-time stats
     const totalRounds = computed(() => Object.keys(records.value).length);
     const totalNetProfit = computed(() => {
       let sum = 0;
@@ -209,23 +195,34 @@ createApp({
     });
     const sortedRecords = computed(() => Object.entries(records.value).sort((a,b)=>new Date(b[0])-new Date(a[0])));
 
-    // ---- reinvest month: add month's profit to base bankroll, keep all records ----
-    function reinvestMonth() {
-      const profitThisMonth = monthNetProfit.value;
-      if (profitThisMonth === 0) return;
-      state.bankroll += profitThisMonth;
-      // Do NOT delete any records – they stay for audit.
-      saveRecords();
+    // ---- reinvest period: add period profit to base bankroll, reset period stats ----
+    function reinvestPeriod() {
+      if (periodProfit.value === 0) return;
+      state.bankroll += periodProfit.value;
+      periodProfit.value = 0;
+      periodRounds.value = 0;
+      savePeriodStats();
       generate(); // regenerate matrices with new base bankroll
     }
 
-    // ---- manual base bankroll change ----
+    // ---- manual base bankroll change (e.g., editing input) ----
     function updateBaseBankroll() {
-      // Just change the base, no records touched. Regenerate to update stakes.
       generate();
     }
 
-    // ---- generate matrices using current matrixStake ----
+    // ---- save period stats to localStorage ----
+    function savePeriodStats() {
+      localStorage.setItem("TiDynPeriodProfit", periodProfit.value);
+      localStorage.setItem("TiDynPeriodRounds", periodRounds.value);
+    }
+    function loadPeriodStats() {
+      const pProfit = localStorage.getItem("TiDynPeriodProfit");
+      const pRounds = localStorage.getItem("TiDynPeriodRounds");
+      if (pProfit !== null) periodProfit.value = Number(pProfit);
+      if (pRounds !== null) periodRounds.value = Number(pRounds);
+    }
+
+    // ---- generate matrices ----
     function generatePairs() {
       const pairs = [];
       for (let i = 0; i < state.matches.length; i++) {
@@ -321,7 +318,7 @@ createApp({
       if (selectedDateStr.value && !records.value[selectedDateStr.value]) updateNetFromNoCount();
     });
 
-    // ---- localStorage ----
+    // ---- records & localStorage ----
     function loadRecords() {
       const stored = localStorage.getItem("TiDynRecords");
       if (stored) records.value = JSON.parse(stored);
@@ -338,7 +335,7 @@ createApp({
         chartInstance = new Chart(ctx, {
           type: 'line',
           data: { labels: [], datasets: [{ label: 'Daily P/L ($)', data: [], borderColor: '#c5a059', tension: 0.2 }] },
-          options: { responsive: true, maintainAspectRatio: true }
+          options: { responsive: true, maintainAspectRatio: true, plugins: { tooltip: { callbacks: { label: (ctx) => `$${ctx.raw.toFixed(2)}` } } } }
         });
       }
       if (chartInstance) {
@@ -381,15 +378,26 @@ createApp({
     }
     function saveRecord() {
       if (!selectedDateStr.value) return;
+      const net = recordForm.netUSD;
       records.value[selectedDateStr.value] = {
         noCount: recordForm.noCount,
-        netUSD: recordForm.netUSD
+        netUSD: net
       };
+      // Update period stats
+      periodProfit.value += net;
+      periodRounds.value++;
+      savePeriodStats();
       saveRecords();
       selectedDateStr.value = null;
     }
     function clearRecord() {
       if (!selectedDateStr.value) return;
+      const oldRec = records.value[selectedDateStr.value];
+      if (oldRec) {
+        periodProfit.value -= oldRec.netUSD;
+        periodRounds.value--;
+        savePeriodStats();
+      }
       delete records.value[selectedDateStr.value];
       saveRecords();
       selectedDateStr.value = null;
@@ -406,6 +414,7 @@ createApp({
     // ---- splash screen ----
     onMounted(() => {
       loadRecords();
+      loadPeriodStats();
       setTimeout(() => {
         const splash = document.getElementById("splash");
         if (splash) {
@@ -427,13 +436,13 @@ createApp({
       currentYear, currentMonth, monthNames, calendarDays,
       matrixStake, currentBankroll, totalRounds, totalNetProfit,
       avgProfit, bestDayProfit, worstDayProfit, sortedRecords,
-      monthlyRounds, monthNetProfit,
+      periodProfit, periodRounds,
       fmt, generate, selectDate, saveRecord, clearRecord,
       prevMonth, nextMonth, updateNetFromNoCount,
-      reinvestMonth, updateBaseBankroll
+      reinvestPeriod, updateBaseBankroll
     };
   }
 }).mount("#app");
 </script>
 </body>
-                                                                              </html>
+                                                                        </html>
