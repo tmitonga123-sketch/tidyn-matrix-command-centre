@@ -5,26 +5,29 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TiDyn Matrix – Live Hedge + Simulator</title>
 <script src="https://cdn.tailwindcss.com"></script>
-<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
-  body{background:#0b0c10;color:#e5e7eb;font-family:system-ui}
-  .card{background:#111318;border:1px solid #1e2229;border-radius:16px;padding:1rem}
-  .btn-gold{background:#c5a059;color:#0b0c10;font-weight:700;padding:6px 12px;border-radius:40px;cursor:pointer}
-  .btn-secondary{background:#1e293b;color:#cbd5e1;padding:6px 12px;border-radius:30px;cursor:pointer}
-  input,select{background:#0b0c10;border:1px solid #2a3342;border-radius:12px;padding:6px 10px;color:white}
-  .calendar-day{background:#0f121b;border-radius:12px;padding:8px;text-align:center;cursor:pointer}
-  .has-record{background:#2a2a1c;border:1px solid #c5a059}
+  [v-cloak] { display: none; }
+  body { background:#0b0c10; color:#e5e7eb; font-family: system-ui; }
+  .card { background:#111318; border:1px solid #1e2229; border-radius:16px; padding:1rem; }
+  .btn-gold { background:#c5a059; color:#0b0c10; font-weight:700; padding:6px 12px; border-radius:40px; cursor:pointer; }
+  .btn-secondary { background:#1e293b; color:#cbd5e1; padding:6px 12px; border-radius:30px; cursor:pointer; }
+  input, select { background:#0b0c10; border:1px solid #2a3342; border-radius:12px; padding:6px 10px; color:white; }
+  .calendar-day { background:#0f121b; border-radius:12px; padding:8px; text-align:center; cursor:pointer; }
+  .has-record { background:#2a2a1c; border:1px solid #c5a059; }
 </style>
 </head>
 <body>
 <div id="app" v-cloak>
 <div class="max-w-7xl mx-auto px-4 py-4">
+
   <!-- Header -->
   <div class="flex justify-between items-center border-b border-gray-800 pb-3 mb-5">
     <div class="text-2xl font-bold text-amber-400">TiDyn MULTIVERSE MATRIX <span class="text-sm">(live hedge + early goal sim)</span></div>
     <div>Bankroll: <span class="text-amber-400 font-bold">${{ fmt(currentBankroll) }}</span></div>
   </div>
+
   <!-- Stats -->
   <div class="grid grid-cols-4 gap-3 mb-6">
     <div class="card text-center"><div class="text-xs">Rounds</div><div class="text-xl">{{ totalRounds }}</div></div>
@@ -32,13 +35,15 @@
     <div class="card text-center"><div class="text-xs">Avg / round</div><div class="text-xl" :class="avgProfit>=0?'text-green-400':'text-red-400'">${{ fmt(avgProfit) }}</div></div>
     <div class="card text-center"><div class="text-xs">Best / worst</div><div class="text-sm">${{ fmt(bestDayProfit) }} / ${{ fmt(worstDayProfit) }}</div></div>
   </div>
+
   <!-- Bankroll & generate -->
   <div class="card mb-5 flex flex-wrap gap-4 items-end">
     <div><div class="text-xs">Base bankroll ($)</div><input type="number" v-model.number="state.bankroll" step="100" style="width:140px"/></div>
     <div><div class="text-xs">Per matrix stake (2.78%)</div><div class="font-mono">${{ fmt(matrixStake) }}</div></div>
     <button class="btn-gold" @click="generate">⟳ Generate 6 Matrices</button>
   </div>
-  <!-- Odds inputs for 4 matches -->
+
+  <!-- Odds inputs -->
   <div class="card mb-5">
     <div class="text-sm mb-2">Match BTTS odds (Yes live target / No pre-match)</div>
     <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -49,12 +54,13 @@
       </div>
     </div>
   </div>
-  <!-- 6 Matrices display (5 slips each) -->
+
+  <!-- 6 Matrices -->
   <div v-if="matrices.length" class="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
     <div v-for="(m, idx) in matrices" :key="idx" class="card border-l-4 border-l-amber-600">
       <div class="flex justify-between items-center">
         <b>{{ m.pair[0].name }} – {{ m.pair[1].name }}</b>
-        <span class="text-xs bg-gray-800 px-2 py-0.5 rounded-full">parlay: {{ (m.parlayOdds).toFixed(2) }}x</span>
+        <span class="text-xs bg-gray-800 px-2 py-0.5 rounded-full">parlay: {{ m.parlayOdds.toFixed(2) }}x</span>
       </div>
       <hr class="my-2"/>
       <div class="text-sm space-y-1">
@@ -69,7 +75,8 @@
       </div>
     </div>
   </div>
-  <!-- Simulation panel -->
+
+  <!-- Early Goal Simulator -->
   <div v-if="matrices.length" class="card mb-5 bg-gray-900/50">
     <div class="font-bold flex gap-2 items-center">⚠️ Early Goal Simulator <span class="text-xs text-gray-400">(auto‑bet Yes singles not placed)</span></div>
     <div class="flex flex-wrap gap-4 items-end mt-2">
@@ -86,8 +93,9 @@
         <div class="font-mono text-amber-300">${{ fmt(simulatedNet) }}</div>
       </div>
     </div>
-    <div class="text-xs text-gray-400 mt-2">* Early goal: that match's live Yes single is never placed. Only pre‑match No bets remain. The simulation uses current matrix stakes.</div>
+    <div class="text-xs text-gray-400 mt-2">* Early goal: that match's live Yes single is never placed. Only pre‑match No bets remain.</div>
   </div>
+
   <!-- Calendar + Tracker -->
   <div class="card">
     <div class="flex justify-between items-center mb-3">
@@ -114,14 +122,16 @@
         <button class="btn-gold py-1 px-4" @click="saveRecord">Save</button>
         <button class="btn-secondary py-1 px-4" @click="clearRecord">Delete</button>
       </div>
-      <div class="text-xs text-gray-400 mt-2">* Auto‑calculated assuming perfect live triggers (no early goals). Use simulator above to see early goal impact.</div>
+      <div class="text-xs text-gray-400 mt-2">* Auto‑calculated assuming perfect live triggers (no early goals).</div>
     </div>
   </div>
+
   <!-- Chart -->
   <div v-if="totalRounds > 1" class="card mt-5">
     <div class="font-bold mb-2">📈 Daily profit evolution</div>
     <canvas id="profitChart" style="max-height: 280px; width:100%"></canvas>
   </div>
+
 </div>
 </div>
 
@@ -147,8 +157,6 @@ createApp({
     const currentMonth = ref(new Date().getMonth());
     const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
     let chartInstance = null;
-
-    // Simulation state
     const simMatch = ref(null);
     const simNoCount = ref(2);
     const simulatedNet = ref(0);
@@ -156,72 +164,10 @@ createApp({
     const fmt = n => Number(n).toFixed(2);
     const matrixStake = computed(() => state.bankroll * 0.0278);
 
-    // 5‑slip solver: exact -30% loss on Y/Y, Y/N, N/Y; +225% on N/N
-    // using symmetry a=b (Yes singles), c=d (No singles). Solves for a,c,e given S, Y, N.
-    function solve5Slip(Y, N, S) {
-      // Y = live Yes odds, N = pre No odds. We want:
-      // Y/Y: 2*a*(Y-1) - (2*c + e) = -0.3S
-      // Y/N: a*(Y-1) + c*(N-1) - (a + c + e) = -0.3S   (since one Yes single wins, one No single wins)
-      // N/Y same.
-      // N/N: 2*c*(N-1) + e*(N*N-1) - 2*a = +2.25S
-      // And total: 2a+2c+e = S.
-      // Solve linear equations:
-      // From total: e = S - 2a - 2c.
-      // Plug into Y/Y: 2a(Y-1) - 2c - (S-2a-2c) = -0.3S => 2a(Y-1) - 2c - S + 2a + 2c = -0.3S => 2a(Y-1+1) - S = 2aY - S = -0.3S => 2aY = 0.7S => a = (0.7S)/(2Y).
-      // Great! So a is independent of N.
-      const a = (0.7 * S) / (2 * Y);
-      // From Y/N: a(Y-1) + c(N-1) - (a + c + e) = -0.3S => a(Y-1) + c(N-1) - a - c - e = -0.3S => a(Y-2) + c(N-2) - e = -0.3S.
-      // Substitute e = S - 2a - 2c:
-      // a(Y-2) + c(N-2) - (S - 2a - 2c) = -0.3S => a(Y-2) + c(N-2) - S + 2a + 2c = -0.3S => a(Y-2+2) + c(N-2+2) - S = aY + cN - S = -0.3S => aY + cN = 0.7S.
-      // So c = (0.7S - aY)/N.
-      const c = (0.7 * S - a * Y) / N;
-      let e = S - 2*a - 2*c;
-      // Clamp negative values (should not happen for reasonable odds)
-      if (a < 0 || c < 0 || e < 0) {
-        // fallback to safe values
-        return { yes1: 0, yes2: 0, no1: 0, no2: 0, noNo: 0, total: 0 };
-      }
-      return { yes1: a, yes2: a, no1: c, no2: c, noNo: e, total: 2*a+2*c+e };
-    }
-
-    function generatePairs() {
-      const pairs = [];
-      for (let i = 0; i < state.matches.length; i++) {
-        for (let j = i+1; j < state.matches.length; j++) {
-          pairs.push([state.matches[i], state.matches[j]]);
-        }
-      }
-      return pairs;
-    }
-
-    function generate() {
-      const pairs = generatePairs();
-      const S = matrixStake.value;
-      const newMatrices = [];
-      for (let [mA, mB] of pairs) {
-        const stakes1 = solve5Slip(mA.yesOdds, mA.noOdds, S/2); // Wait: each matrix stake is S, but we have two matches with possibly different odds. We need to compute for the pair as a whole. The above solver assumes same Y,N for both matches. To handle different odds, we need a more general solver. For simplicity, we'll average? Better: use numeric solver.
-        // Given the complexity, we'll use a per‑pair numeric solver that solves the 5x5 system with symmetry a=b? Not symmetric if odds differ. Let's implement a general linear solver for 5 unknowns with equations:
-        // We'll use the pre‑computed scaling from the original example where odds were 2.25/2.50. For different odds, we'll adjust using a simple iterative approach.
-        // To avoid overcomplication, we'll use the exact solver from earlier for 4 slips? But this is 5 slips. I'll implement a robust numeric solver using linear algebra for each matrix.
-        const stakes = solvePair(mA, mB, S);
-        const parlayOdds = mA.noOdds * mB.noOdds;
-        newMatrices.push({ pair: [mA, mB], parlayOdds, stakes });
-      }
-      matrices.value = newMatrices;
-    }
-
-    // General 5‑slip solver for two matches with possibly different Y and N odds.
+    // General 5-slip solver for two matches (different odds)
     function solvePair(mA, mB, S) {
       const Y1 = mA.yesOdds, N1 = mA.noOdds;
       const Y2 = mB.yesOdds, N2 = mB.noOdds;
-      // Variables: a (Yes1), b (Yes2), c (No1), d (No2), e (parlay)
-      // Equations:
-      // 1) Y/Y: a*(Y1-1)+b*(Y2-1) - (c+d+e) = -0.3S
-      // 2) Y/N: a*(Y1-1)+d*(N2-1) - (b+c+e) = -0.3S
-      // 3) N/Y: b*(Y2-1)+c*(N1-1) - (a+d+e) = -0.3S
-      // 4) N/N: c*(N1-1)+d*(N2-1)+e*(N1*N2-1) - (a+b) = +2.25S
-      // 5) total: a+b+c+d+e = S
-      // Solve using linear system 5x5.
       const A = [
         [ (Y1-1), (Y2-1), -1, -1, -1 ],
         [ (Y1-1), -1, -1, (N2-1), -1 ],
@@ -230,7 +176,6 @@ createApp({
         [ 1, 1, 1, 1, 1 ]
       ];
       const B = [ -0.3*S, -0.3*S, -0.3*S, 2.25*S, S ];
-      // Gaussian elimination
       const n = 5;
       let M = A.map(row => [...row]);
       let R = [...B];
@@ -252,7 +197,7 @@ createApp({
         X[i] = (R[i] - sum) / M[i][i];
       }
       let [a,b,c,d,e] = X;
-      a = Math.max(0, a); b = Math.max(0, b); c = Math.max(0, c); d = Math.max(0, d); e = Math.max(0, e);
+      a = Math.max(0,a); b = Math.max(0,b); c = Math.max(0,c); d = Math.max(0,d); e = Math.max(0,e);
       const total = a+b+c+d+e;
       if (total > 0 && Math.abs(total - S) > 0.01) {
         const factor = S / total;
@@ -261,21 +206,37 @@ createApp({
       return { yes1: a, yes2: b, no1: c, no2: d, noNo: e, total: a+b+c+d+e };
     }
 
-    // Compute expected net for each No count (0-4) assuming perfect triggers (both Yes singles placed)
+    function generatePairs() {
+      const pairs = [];
+      for (let i = 0; i < state.matches.length; i++)
+        for (let j = i+1; j < state.matches.length; j++)
+          pairs.push([state.matches[i], state.matches[j]]);
+      return pairs;
+    }
+
+    function generate() {
+      const pairs = generatePairs();
+      const S = matrixStake.value;
+      const newMatrices = [];
+      for (let [mA, mB] of pairs) {
+        const stakes = solvePair(mA, mB, S);
+        const parlayOdds = mA.noOdds * mB.noOdds;
+        newMatrices.push({ pair: [mA, mB], parlayOdds, stakes });
+      }
+      matrices.value = newMatrices;
+    }
+
+    // Expected net per No count (perfect triggers)
     function computeExpectedNetMap() {
       if (matrices.value.length === 0) return {0:0,1:0,2:0,3:0,4:0};
-      const matchIndices = [0,1,2,3];
+      const indices = [0,1,2,3];
       const combos = {0:[[]],1:[],2:[],3:[],4:[[0,1,2,3]]};
       for (let k=1; k<=3; k++) {
         const res = [];
-        function backtrack(start, curr) {
+        const backtrack = (start, curr) => {
           if (curr.length === k) { res.push([...curr]); return; }
-          for (let i=start; i<matchIndices.length; i++) {
-            curr.push(i);
-            backtrack(i+1, curr);
-            curr.pop();
-          }
-        }
+          for (let i=start; i<indices.length; i++) { curr.push(i); backtrack(i+1, curr); curr.pop(); }
+        };
         backtrack(0, []);
         combos[k] = res;
       }
@@ -293,25 +254,17 @@ createApp({
             const Y1 = m.pair[0].yesOdds, N1 = m.pair[0].noOdds;
             const Y2 = m.pair[1].yesOdds, N2 = m.pair[1].noOdds;
             let net = 0;
-            if (!aIsNo && !bIsNo) { // Y/Y
-              net = st.yes1*(Y1-1) + st.yes2*(Y2-1) - (st.no1+st.no2+st.noNo);
-            } else if (!aIsNo && bIsNo) { // Y/N
-              net = st.yes1*(Y1-1) + st.no2*(N2-1) - (st.yes2+st.no1+st.noNo);
-            } else if (aIsNo && !bIsNo) { // N/Y
-              net = st.no1*(N1-1) + st.yes2*(Y2-1) - (st.yes1+st.no2+st.noNo);
-            } else { // N/N
-              net = st.no1*(N1-1) + st.no2*(N2-1) + st.noNo*(N1*N2-1) - (st.yes1+st.yes2);
-            }
+            if (!aIsNo && !bIsNo) net = st.yes1*(Y1-1) + st.yes2*(Y2-1) - (st.no1+st.no2+st.noNo);
+            else if (!aIsNo && bIsNo) net = st.yes1*(Y1-1) + st.no2*(N2-1) - (st.yes2+st.no1+st.noNo);
+            else if (aIsNo && !bIsNo) net = st.no1*(N1-1) + st.yes2*(Y2-1) - (st.yes1+st.no2+st.noNo);
+            else net = st.no1*(N1-1) + st.no2*(N2-1) + st.noNo*(N1*N2-1) - (st.yes1+st.yes2);
             totalNet += net;
           }
           results[k].push(totalNet);
         }
       }
       const avg = {};
-      for (let k=0; k<=4; k++) {
-        const arr = results[k];
-        avg[k] = arr.reduce((a,b)=>a+b,0) / (arr.length || 1);
-      }
+      for (let k=0;k<=4;k++) avg[k] = results[k].reduce((a,b)=>a+b,0) / (results[k].length||1);
       return avg;
     }
     const expectedNetMap = ref({0:0,1:0,2:0,3:0,4:0});
@@ -321,77 +274,109 @@ createApp({
       if (val !== undefined) recordForm.netUSD = Math.round(val * 100) / 100;
     }
 
-    // Simulation with early goal
+    // Early goal simulation
     function computeSimulatedNet() {
       if (matrices.value.length === 0 || !simMatch.value) return 0;
-      const earlyMatchName = simMatch.value;
+      const earlyName = simMatch.value;
       const noCount = simNoCount.value;
-      // Need to compute net for the given noCount and with the early match's Yes singles NOT placed (stakes set to 0 for that match's Yes slip in all matrices containing it)
-      // For each matrix, if it contains the early match, set its yes stake to 0, else keep original.
-      let totalNet = 0;
-      for (let m of matrices.value) {
-        const aName = m.pair[0].name;
-        const bName = m.pair[1].name;
-        const aIdx = state.matches.findIndex(mm => mm.name === aName);
-        const bIdx = state.matches.findIndex(mm => mm.name === bName);
-        // Determine which matches are No based on noCount (we need a specific set? Simulation uses average over all combos? For simplicity, we'll use the same approach as expectedNetMap but with modified stakes.
-        // We'll compute net for each possible combination of No's of size noCount and average.
-        const matchIndices = [0,1,2,3];
-        const combos = [];
-        function gen(start, curr) {
-          if (curr.length === noCount) { combos.push([...curr]); return; }
-          for (let i=start; i<matchIndices.length; i++) { curr.push(i); gen(i+1, curr); curr.pop(); }
-        }
-        gen(0, []);
-        let sum = 0;
-        for (let combo of combos) {
-          const noSet = new Set(combo);
+      const indices = [0,1,2,3];
+      const combos = [];
+      const backtrack = (start, curr) => {
+        if (curr.length === noCount) { combos.push([...curr]); return; }
+        for (let i=start; i<indices.length; i++) { curr.push(i); backtrack(i+1, curr); curr.pop(); }
+      };
+      backtrack(0, []);
+      if (combos.length === 0) return 0;
+      let totalSum = 0;
+      for (let combo of combos) {
+        const noSet = new Set(combo);
+        let roundNet = 0;
+        for (let m of matrices.value) {
+          const aIdx = state.matches.findIndex(mm => mm.name === m.pair[0].name);
+          const bIdx = state.matches.findIndex(mm => mm.name === m.pair[1].name);
           const aIsNo = noSet.has(aIdx);
           const bIsNo = noSet.has(bIdx);
           let st = { ...m.stakes };
-          if (earlyMatchName === aName) st.yes1 = 0;
-          if (earlyMatchName === bName) st.yes2 = 0;
+          if (earlyName === m.pair[0].name) st.yes1 = 0;
+          if (earlyName === m.pair[1].name) st.yes2 = 0;
           const Y1 = m.pair[0].yesOdds, N1 = m.pair[0].noOdds;
           const Y2 = m.pair[1].yesOdds, N2 = m.pair[1].noOdds;
           let net = 0;
-          if (!aIsNo && !bIsNo) {
-            net = st.yes1*(Y1-1) + st.yes2*(Y2-1) - (st.no1+st.no2+st.noNo);
-          } else if (!aIsNo && bIsNo) {
-            net = st.yes1*(Y1-1) + st.no2*(N2-1) - (st.yes2+st.no1+st.noNo);
-          } else if (aIsNo && !bIsNo) {
-            net = st.no1*(N1-1) + st.yes2*(Y2-1) - (st.yes1+st.no2+st.noNo);
-          } else {
-            net = st.no1*(N1-1) + st.no2*(N2-1) + st.noNo*(N1*N2-1) - (st.yes1+st.yes2);
-          }
-          sum += net;
+          if (!aIsNo && !bIsNo) net = st.yes1*(Y1-1) + st.yes2*(Y2-1) - (st.no1+st.no2+st.noNo);
+          else if (!aIsNo && bIsNo) net = st.yes1*(Y1-1) + st.no2*(N2-1) - (st.yes2+st.no1+st.noNo);
+          else if (aIsNo && !bIsNo) net = st.no1*(N1-1) + st.yes2*(Y2-1) - (st.yes1+st.no2+st.noNo);
+          else net = st.no1*(N1-1) + st.no2*(N2-1) + st.noNo*(N1*N2-1) - (st.yes1+st.yes2);
+          roundNet += net;
         }
-        totalNet += (combos.length ? sum / combos.length : 0);
+        totalSum += roundNet;
       }
-      return totalNet;
+      return totalSum / combos.length;
     }
 
     watch([simMatch, simNoCount, matrices], () => {
       simulatedNet.value = computeSimulatedNet();
     }, { deep: true });
-
     watch(matrices, () => {
       updateExpectedNet();
       if (selectedDateStr.value && !records.value[selectedDateStr.value]) updateNetFromNoCount();
     });
 
-    // Records handling (same as before)
-    function loadRecords() {
-      const stored = localStorage.getItem("TiDynRecords");
-      if (stored) records.value = JSON.parse(stored);
-    }
-    function saveRecords() {
-      localStorage.setItem("TiDynRecords", JSON.stringify(records.value));
-      updateChart();
-    }
-    const currentBankroll = computed(() => {
-      let sum = state.bankroll;
-      for (let k in records.value) sum += records.value[k].netUSD;
-      return sum;
-    });
+    // Records & localStorage
+    function loadRecords() { const s = localStorage.getItem("TiDynRecords"); if(s) records.value = JSON.parse(s); }
+    function saveRecords() { localStorage.setItem("TiDynRecords", JSON.stringify(records.value)); updateChart(); }
+    const currentBankroll = computed(() => { let sum = state.bankroll; for(let k in records.value) sum += records.value[k].netUSD; return sum; });
     const totalRounds = computed(() => Object.keys(records.value).length);
-    const totalNetP
+    const totalNetProfit = computed(() => { let s=0; for(let k in records.value) s+=records.value[k].netUSD; return s; });
+    const avgProfit = computed(() => totalRounds.value ? totalNetProfit.value / totalRounds.value : 0);
+    const bestDayProfit = computed(() => { let b=-Infinity; for(let k in records.value) b=Math.max(b,records.value[k].netUSD); return b===-Infinity?0:b; });
+    const worstDayProfit = computed(() => { let w=Infinity; for(let k in records.value) w=Math.min(w,records.value[k].netUSD); return w===Infinity?0:w; });
+    const sortedRecords = computed(() => Object.entries(records.value).sort((a,b)=>new Date(b[0])-new Date(a[0])));
+
+    function updateChart() {
+      if (!chartInstance && document.getElementById('profitChart')) {
+        const ctx = document.getElementById('profitChart').getContext('2d');
+        chartInstance = new Chart(ctx, { type:'line', data:{ labels:[], datasets:[{ label:'Daily P/L ($)', data:[], borderColor:'#c5a059', tension:0.2 }] }, options:{ responsive:true, maintainAspectRatio:true } });
+      }
+      if (chartInstance) {
+        const dates = Object.keys(records.value).sort();
+        const profits = dates.map(d=>records.value[d].netUSD);
+        chartInstance.data.labels = dates;
+        chartInstance.data.datasets[0].data = profits;
+        chartInstance.update();
+      }
+    }
+    watch(records, ()=>updateChart(), {deep:true});
+
+    // Calendar helpers
+    function getDaysInMonth(y,m) { return new Date(y, m+1, 0).getDate(); }
+    function getFirstDayOffset(y,m) { let d = new Date(y,m,1).getDay(); return d===0 ? 6 : d-1; }
+    const calendarDays = computed(() => {
+      const y = currentYear.value, m = currentMonth.value;
+      const daysInMonth = getDaysInMonth(y,m);
+      const offset = getFirstDayOffset(y,m);
+      let days = [];
+      for (let i=0; i<offset; i++) days.push({ dayNum: null, dateStr: null, hasRecord: false, id: `e-${i}` });
+      for (let d=1; d<=daysInMonth; d++) {
+        const dateStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        days.push({ dayNum: d, dateStr, hasRecord: !!records.value[dateStr], id: dateStr });
+      }
+      return days;
+    });
+    function selectDate(dateStr) { if(!dateStr) return; selectedDateStr.value=dateStr; const rec=records.value[dateStr]; if(rec){ recordForm.noCount=rec.noCount; recordForm.netUSD=rec.netUSD; } else { recordForm.noCount=2; updateNetFromNoCount(); } }
+    function saveRecord() { if(!selectedDateStr.value) return; records.value[selectedDateStr.value]={ noCount: recordForm.noCount, netUSD: recordForm.netUSD }; saveRecords(); selectedDateStr.value=null; }
+    function clearRecord() { if(!selectedDateStr.value) return; delete records.value[selectedDateStr.value]; saveRecords(); selectedDateStr.value=null; }
+    function prevMonth() { if(currentMonth.value===0){ currentMonth.value=11; currentYear.value--; } else currentMonth.value--; }
+    function nextMonth() { if(currentMonth.value===11){ currentMonth.value=0; currentYear.value++; } else currentMonth.value++; }
+
+    onMounted(() => { loadRecords(); generate(); updateExpectedNet(); nextTick(()=>updateChart()); });
+    return {
+      state, matrices, records, selectedDateStr, recordForm, currentYear, currentMonth, monthNames, calendarDays,
+      matrixStake, currentBankroll, totalRounds, totalNetProfit, avgProfit, bestDayProfit, worstDayProfit, sortedRecords,
+      simMatch, simNoCount, simulatedNet,
+      fmt, generate, selectDate, saveRecord, clearRecord, prevMonth, nextMonth, updateNetFromNoCount
+    };
+  }
+}).mount("#app");
+</script>
+</body>
+                                                       </html>
