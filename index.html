@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>TiDyn Matrix – Splash Fixed</title>
+<title>TiDyn Matrix – Advanced Terminal</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -17,89 +17,7 @@
   }
   [v-cloak] { display: none !important; }
   
-  /* Splash screen */
-  .splash-screen {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: radial-gradient(circle at center, #0f131f, #04060a);
-    z-index: 100000;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    flex-direction: column;
-    transition: opacity 0.4s ease-out;
-    opacity: 1;
-  }
-  .splash-logo {
-    text-align: center;
-    animation: pulseGlow 2s ease-in-out infinite;
-  }
-  .splash-logo .big {
-    font-size: 4rem;
-    font-weight: 900;
-    background: linear-gradient(135deg, #d4af37, #f9e8a2, #aa7c11);
-    background-size: 200% auto;
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    font-family: monospace;
-    letter-spacing: 4px;
-    animation: shimmer 4s linear infinite;
-  }
-  .splash-logo .small {
-    display: block;
-    font-size: 0.9rem;
-    color: #94a3b8;
-    letter-spacing: 6px;
-    margin-top: 12px;
-    font-weight: 400;
-    text-transform: uppercase;
-  }
-  @keyframes pulseGlow {
-    0% { filter: drop-shadow(0 0 5px rgba(212, 175, 55, 0.2)); transform: scale(1); }
-    50% { filter: drop-shadow(0 0 25px rgba(212, 175, 55, 0.6)); transform: scale(1.015); }
-    100% { filter: drop-shadow(0 0 5px rgba(212, 175, 55, 0.2)); transform: scale(1); }
-  }
-  @keyframes shimmer {
-    0% { background-position: 0% 50%; }
-    100% { background-position: 200% 50%; }
-  }
-  .splash-sub {
-    margin-top: 32px;
-    font-size: 0.8rem;
-    color: #475569;
-    letter-spacing: 3px;
-    text-transform: uppercase;
-    font-family: monospace;
-  }
-  .skip-btn {
-    margin-top: 32px;
-    background: rgba(212, 175, 55, 0.15);
-    color: #f59e0b;
-    border: 1px solid rgba(212, 175, 55, 0.4);
-    padding: 8px 24px;
-    border-radius: 9999px;
-    font-weight: 600;
-    cursor: pointer;
-    font-size: 0.85rem;
-    transition: all 0.2s;
-    backdrop-filter: blur(4px);
-  }
-  .skip-btn:hover {
-    background: #d4af37;
-    color: #07090e;
-    box-shadow: 0 0 15px rgba(212, 175, 55, 0.4);
-  }
-  
-  /* Main app hidden initially */
-  #app {
-    display: none;
-  }
-  
-  /* Rest of UI styles (same as before) */
+  /* Premium UI Overhauls */
   .panel-card {
     background: rgba(22, 28, 41, 0.65);
     border: 1px solid rgba(255, 255, 255, 0.05);
@@ -152,6 +70,7 @@
     border-color: #d4af37 !important;
     box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.1);
   }
+  
   .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
   .calendar-day {
     background: rgba(15, 21, 32, 0.5);
@@ -191,48 +110,6 @@
 </head>
 <body>
 
-<!-- Splash screen -->
-<div id="splashScreen" class="splash-screen">
-  <div class="splash-logo">
-    <div class="big">TiDyn</div>
-    <div class="small">Multiverse Matrix</div>
-  </div>
-  <div class="splash-sub">initializing...</div>
-  <button id="skipSplashBtn" class="skip-btn">Access System</button>
-</div>
-
-<!-- Simple script to remove splash after 2.5 seconds or on click -->
-<script>
-  (function() {
-    var splash = document.getElementById('splashScreen');
-    var app = document.getElementById('app');
-    function removeSplash() {
-      if (!splash) return;
-      splash.style.transition = 'opacity 0.4s';
-      splash.style.opacity = '0';
-      setTimeout(function() {
-        if (splash.parentNode) splash.parentNode.removeChild(splash);
-        if (app) app.style.display = 'block';
-      }, 400);
-    }
-    // Auto after 2.5 seconds
-    setTimeout(removeSplash, 2500);
-    // Skip button click
-    var skipBtn = document.getElementById('skipSplashBtn');
-    if (skipBtn) {
-      skipBtn.addEventListener('click', function(e) {
-        e.stopPropagation();
-        removeSplash();
-      });
-    }
-    // Also tap anywhere on splash
-    if (splash) {
-      splash.addEventListener('click', removeSplash);
-    }
-  })();
-</script>
-
-<!-- Main app (hidden initially) -->
 <div id="app">
 <div class="max-w-7xl mx-auto px-6 py-6">
 
@@ -419,4 +296,76 @@ createApp({
     }
     function solveMatrix(mA, mB, S) {
       if (S <= 0) return { yes1:0, yes2:0, no1:0, no2:0, parlay:0, total:0 };
-      const Y1 = mA.yesOdds - 1,
+      const Y1 = mA.yesOdds - 1, Y2 = mB.yesOdds - 1, L = 0.3 * S, denom = mA.yesOdds + mB.yesOdds;
+      let a = (0.7 * S) / denom, b = a;
+      let c = a * (mA.yesOdds / mA.noOdds), d = b * (mB.yesOdds / mB.noOdds);
+      let e = a*Y1 + b*Y2 + L - c - d;
+      if (isNaN(e) || e < 0) e = 0;
+      return { yes1: a, yes2: b, no1: c, no2: d, parlay: e, total: a+b+c+d+e };
+    }
+    function generate() {
+      const S = matrixStake.value;
+      if (S <= 0) { matrices.value = []; return; }
+      const pairs = generatePairs();
+      const newMatrices = [];
+      for (let [mA, mB] of pairs) {
+        const stakes = solveMatrix(mA, mB, S);
+        const parlayOdds = mA.noOdds * mB.noOdds;
+        newMatrices.push({ pair: [mA, mB], parlayOdds, stakes });
+      }
+      matrices.value = newMatrices;
+      updateExpectedNetMap();
+    }
+    function computeExpectedNetForNoCount() {
+      if (matrices.value.length === 0) return {0:0,1:0,2:0,3:0,4:0};
+      const combos = {0:[[]],1:[],2:[],3:[],4:[[0,1,2,3]]};
+      for (let k=1;k<=3;k++) {
+        const res = [];
+        const backtrack = (start, curr) => {
+          if (curr.length === k) { res.push([...curr]); return; }
+          for (let i=start;i<4;i++) { curr.push(i); backtrack(i+1, curr); curr.pop(); }
+        };
+        backtrack(0, []);
+        combos[k] = res;
+      }
+      const results = {0:[],1:[],2:[],3:[],4:[]};
+      for (let k=0;k<=4;k++) {
+        for (let combo of combos[k]) {
+          const noSet = new Set(combo);
+          let totalNet = 0;
+          for (let m of matrices.value) {
+            const aIdx = state.matches.findIndex(mm => mm.name === m.pair[0].name);
+            const bIdx = state.matches.findIndex(mm => mm.name === m.pair[1].name);
+            const aIsNo = noSet.has(aIdx), bIsNo = noSet.has(bIdx);
+            const st = m.stakes;
+            const Y1 = m.pair[0].yesOdds, N1 = m.pair[0].noOdds;
+            const Y2 = m.pair[1].yesOdds, N2 = m.pair[1].noOdds;
+            let net = 0;
+            if (!aIsNo && !bIsNo) net = st.yes1*(Y1-1) + st.yes2*(Y2-1) - (st.no1+st.no2+st.parlay);
+            else if (!aIsNo && bIsNo) net = st.yes1*(Y1-1) + st.no2*(N2-1) - (st.yes2+st.no1+st.parlay);
+            else if (aIsNo && !bIsNo) net = st.no1*(N1-1) + st.yes2*(Y2-1) - (st.yes1+st.no2+st.parlay);
+            else net = st.no1*(N1-1) + st.no2*(N2-1) + st.parlay*(N1*N2-1) - (st.yes1+st.yes2);
+            totalNet += net;
+          }
+          results[k].push(totalNet);
+        }
+      }
+      const avg = {};
+      for (let k=0;k<=4;k++) avg[k] = results[k].reduce((a,b)=>a+b,0) / (results[k].length||1);
+      return avg;
+    }
+    const expectedNetMap = ref({0:0,1:0,2:0,3:0,4:0});
+    function updateExpectedNetMap() { expectedNetMap.value = computeExpectedNetForNoCount(); }
+    function updateNetFromNoCount() {
+      const val = expectedNetMap.value[recordForm.noCount];
+      if (val !== undefined) recordForm.netUSD = Math.round(val * 100) / 100;
+    }
+    watch(matrices, () => {
+      updateExpectedNetMap();
+      if (selectedDateStr.value && !records.value[selectedDateStr.value]) updateNetFromNoCount();
+    });
+
+    function loadRecords() { const stored = localStorage.getItem("TiDynRecords"); if (stored) records.value = JSON.parse(stored); }
+    function saveRecords() { localStorage.setItem("TiDynRecords", JSON.stringify(records.value)); updateBarChart(); }
+    function updateBarChart() {
+ 
