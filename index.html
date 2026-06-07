@@ -373,37 +373,54 @@
 </div>
 
 <script>
-// Pure Vanilla JavaScript splash screen state removal loop
+// ---------- SPLASH CONTROLLER (FIXED) ----------
+let splashRemoved = false;
+
 function removeSplash() {
-  var splash = document.getElementById('splashScreen');
-  var appDiv = document.getElementById('app');
-  if (splash) {
-    splash.style.opacity = '0';
-    setTimeout(function() {
-      if (splash.parentNode) splash.remove();
-      if (appDiv) appDiv.style.display = 'block';
-    }, 450);
-  } else {
-    if (appDiv) appDiv.style.display = 'block';
-  }
+  if (splashRemoved) return;
+  splashRemoved = true;
+
+  const splash = document.getElementById("splashScreen");
+  const app = document.getElementById("app");
+
+  if (!splash || !app) return;
+
+  splash.style.pointerEvents = "none";
+  splash.style.transition = "opacity .45s ease";
+  splash.style.opacity = "0";
+
+  setTimeout(() => {
+    splash.remove();
+    app.style.display = "block";
+    requestAnimationFrame(() => {
+      app.style.opacity = "1";
+    });
+  }, 450);
 }
 
-// Timeout auto-release fallback trigger
-setTimeout(removeSplash, 2500);
-
-var skipBtn = document.getElementById('skipSplashBtn');
-if (skipBtn) {
-  skipBtn.addEventListener('click', function(e) {
-    e.stopPropagation();
-    removeSplash();
-  });
-}
-
-document.body.addEventListener('click', function(e) {
-  var splash = document.getElementById('splashScreen');
-  if (splash && splash.style.opacity !== '0' && e.target.id !== 'skipSplashBtn') {
-    removeSplash();
+// Wait until page is actually ready
+window.addEventListener("load", () => {
+  const app = document.getElementById("app");
+  if (app) {
+    app.style.display = "none";
+    app.style.opacity = "0";
+    app.style.transition = "opacity .35s ease";
   }
+
+  // Auto launch
+  setTimeout(removeSplash, 2500);
+
+  // Skip button
+  const skipBtn = document.getElementById("skipSplashBtn");
+  if (skipBtn) {
+    skipBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      removeSplash();
+    });
+  }
+
+  // Tap anywhere to continue (once)
+  document.addEventListener("click", removeSplash, { once: true });
 });
 
 const { createApp, reactive, ref, computed, onMounted, watch, nextTick } = Vue;
@@ -466,17 +483,4 @@ createApp({
 
     function reinvestPeriod() {
       if (periodProfit.value === 0) return;
-      state.bankroll += periodProfit.value;
-      periodProfit.value = 0;
-      periodRounds.value = 0;
-      savePeriodStats();
-      generate();
-    }
-
-    function updateBaseBankroll() {
-      generate();
-    }
-
-    function savePeriodStats() {
-      localStorage.setItem("TiDynPeriodProfit", periodProfit.value);
- 
+      state.bankroll += periodProfit.
