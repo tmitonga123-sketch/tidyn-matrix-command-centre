@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TiDyn Matrix – Bar Chart (Red/Green)</title>
+<title>TiDyn Matrix – Bar Chart (No Splash)</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -18,18 +18,10 @@
   .calendar-day{background:#0f121b;border-radius:12px;padding:8px;text-align:center;cursor:pointer}
   .has-record{background:#2a2a1c;border:1px solid #c5a059;color:#ffd966}
   .stat-card{background:#0a0e16;border-radius:20px;padding:12px;text-align:center}
-  .splash-screen{position:fixed;top:0;left:0;width:100%;height:100%;background:#000;z-index:99999;display:flex;justify-content:center;align-items:center;opacity:1;transition:opacity 1s ease; pointer-events:none;}
-  .splash-screen.hide{opacity:0;pointer-events:none}
-  .splash-logo{width:80%;max-width:400px;text-align:center;background:linear-gradient(135deg,#c5a059,#f5d97f);-webkit-background-clip:text;background-clip:text;color:transparent;font-size:3rem;font-weight:bold;font-family:monospace}
-  .splash-logo span{display:block;font-size:1rem;color:#cbd5e1;background:none}
   .tooltip{font-size:0.7rem;color:#9ca3af;margin-top:4px}
 </style>
 </head>
 <body>
-
-<div class="splash-screen" id="splash">
-  <div class="splash-logo">TiDyn<br><span>multiverse matrix</span></div>
-</div>
 
 <div id="app" v-cloak>
 <div class="max-w-7xl mx-auto px-4 py-4">
@@ -134,15 +126,6 @@
 </div>
 
 <script>
-// Force splash removal after 3 seconds even if Vue fails
-setTimeout(function() {
-  var splash = document.getElementById('splash');
-  if (splash) {
-    splash.classList.add('hide');
-    setTimeout(function() { if (splash.parentNode) splash.remove(); }, 900);
-  }
-}, 3000);
-
 const { createApp, reactive, ref, computed, onMounted, watch, nextTick } = Vue;
 
 createApp({
@@ -451,4 +434,4 @@ createApp({
 }).mount("#app");
 </script>
 </body>
-                                                                        </html>
+  </html>
