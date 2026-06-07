@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>TiDyn Matrix – Advanced Quantitative Terminal</title>
+<title>TiDyn Matrix – Advanced Terminal</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -17,7 +17,7 @@
   }
   [v-cloak] { display: none !important; }
   
-  /* Advanced Splash Screen */
+  /* Splash screen */
   .splash-screen {
     position: fixed;
     top: 0;
@@ -30,7 +30,7 @@
     justify-content: center;
     align-items: center;
     flex-direction: column;
-    transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: opacity 0.4s ease-out;
     opacity: 1;
   }
   .splash-logo {
@@ -94,9 +94,13 @@
     box-shadow: 0 0 15px rgba(212, 175, 55, 0.4);
   }
   
-  #app { display: none; }
+  /* Main app hidden until splash removed */
+  #app {
+    display: none;
+    opacity: 1;
+  }
   
-  /* Premium UI Overhauls */
+  /* Premium UI Overhauls (unchanged) */
   .panel-card {
     background: rgba(22, 28, 41, 0.65);
     border: 1px solid rgba(255, 255, 255, 0.05);
@@ -150,7 +154,6 @@
     box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.1);
   }
   
-  /* Refined Dynamic Grid systems */
   .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
   .calendar-day {
     background: rgba(15, 21, 32, 0.5);
@@ -190,15 +193,17 @@
 </head>
 <body>
 
+<!-- Splash screen -->
 <div id="splashScreen" class="splash-screen">
   <div class="splash-logo">
     <div class="big">TiDyn</div>
     <div class="small">Multiverse Matrix</div>
   </div>
-  <div class="splash-sub">Initializing matrix quantitative layout...</div>
+  <div class="splash-sub">loading quantitative system...</div>
   <button id="skipSplashBtn" class="skip-btn">Access System</button>
 </div>
 
+<!-- Main app (hidden initially) -->
 <div id="app">
 <div class="max-w-7xl mx-auto px-6 py-6">
 
@@ -214,24 +219,10 @@
   </div>
 
   <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-    <div class="stat-card">
-      <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Rounds This Period</div>
-      <div class="text-2xl font-bold font-mono text-slate-100">{{ periodRounds }}</div>
-    </div>
-    <div class="stat-card">
-      <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Period Return Profile</div>
-      <div class="text-2xl font-bold font-mono" :class="periodProfit>=0?'text-emerald-400':'text-rose-400'">${{ fmt(periodProfit) }}</div>
-    </div>
-    <div class="stat-card">
-      <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">All-Time Round Average</div>
-      <div class="text-2xl font-bold font-mono" :class="avgProfit>=0?'text-emerald-400':'text-rose-400'">${{ fmt(avgProfit) }}</div>
-    </div>
-    <div class="stat-card">
-      <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Peak Amplitude Variance</div>
-      <div class="text-sm font-bold font-mono text-slate-200 mt-2">
-        <span class="text-emerald-400">${{ fmt(bestDayProfit) }}</span> <span class="text-slate-600">/</span> <span class="text-rose-400">${{ fmt(worstDayProfit) }}</span>
-      </div>
-    </div>
+    <div class="stat-card"><div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Rounds This Period</div><div class="text-2xl font-bold font-mono text-slate-100">{{ periodRounds }}</div></div>
+    <div class="stat-card"><div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Period Return Profile</div><div class="text-2xl font-bold font-mono" :class="periodProfit>=0?'text-emerald-400':'text-rose-400'">${{ fmt(periodProfit) }}</div></div>
+    <div class="stat-card"><div class="text-xs text-slate-400 uppercase tracking-wider mb-1">All-Time Round Average</div><div class="text-2xl font-bold font-mono" :class="avgProfit>=0?'text-emerald-400':'text-rose-400'">${{ fmt(avgProfit) }}</div></div>
+    <div class="stat-card"><div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Peak Amplitude Variance</div><div class="text-sm font-bold font-mono text-slate-200 mt-2"><span class="text-emerald-400">${{ fmt(bestDayProfit) }}</span> / <span class="text-rose-400">${{ fmt(worstDayProfit) }}</span></div></div>
   </div>
 
   <div class="panel-card p-5 mb-6 flex flex-wrap gap-6 items-end justify-between">
@@ -258,19 +249,10 @@
     </div>
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       <div v-for="(m,idx) in state.matches" :key="idx" class="bg-slate-900/40 border border-slate-800/80 rounded-xl p-3 flex flex-col justify-between">
-        <div class="font-bold text-slate-200 border-b border-slate-800/60 pb-1.5 mb-2 flex justify-between items-center">
-          <span>Asset Class {{ m.name }}</span>
-          <span class="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded">Active</span>
-        </div>
+        <div class="font-bold text-slate-200 border-b border-slate-800/60 pb-1.5 mb-2 flex justify-between items-center"><span>Asset Class {{ m.name }}</span><span class="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded">Active</span></div>
         <div class="space-y-2">
-          <div class="flex items-center justify-between gap-2">
-            <span class="text-xs text-slate-400">Yes (Live):</span>
-            <input type="number" step="0.01" v-model.number="m.yesOdds" class="w-24 text-right text-sm" @change="generate"/>
-          </div>
-          <div class="flex items-center justify-between gap-2">
-            <span class="text-xs text-slate-400">No (Pre):</span>
-            <input type="number" step="0.01" v-model.number="m.noOdds" class="w-24 text-right text-sm" @change="generate"/>
-          </div>
+          <div class="flex items-center justify-between gap-2"><span class="text-xs text-slate-400">Yes (Live):</span><input type="number" step="0.01" v-model.number="m.yesOdds" class="w-24 text-right text-sm" @change="generate"/></div>
+          <div class="flex items-center justify-between gap-2"><span class="text-xs text-slate-400">No (Pre):</span><input type="number" step="0.01" v-model.number="m.noOdds" class="w-24 text-right text-sm" @change="generate"/></div>
         </div>
       </div>
     </div>
@@ -279,149 +261,80 @@
   <div v-if="matrices.length" class="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
     <div v-for="(m,idx) in matrices" :key="idx" class="panel-card p-4 border-t-2 border-t-amber-500/60 flex flex-col justify-between">
       <div>
-        <div class="flex justify-between items-start mb-2">
-          <b class="text-slate-200 tracking-wide text-sm font-mono">{{ m.pair[0].name }} ⊗ {{ m.pair[1].name }}</b>
-          <span class="text-[10px] font-mono text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">Parlay: {{ m.parlayOdds.toFixed(2) }}x</span>
-        </div>
+        <div class="flex justify-between items-start mb-2"><b class="text-slate-200 tracking-wide text-sm font-mono">{{ m.pair[0].name }} ⊗ {{ m.pair[1].name }}</b><span class="text-[10px] font-mono text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">Parlay: {{ m.parlayOdds.toFixed(2) }}x</span></div>
         <div class="space-y-1.5 text-xs font-mono mt-3">
-          <div class="flex justify-between items-center p-1.5 rounded bg-slate-950/20">
-            <span class="text-emerald-400 text-[11px]">✅ YES {{ m.pair[0].name }}</span>
-            <span class="text-slate-300 font-bold">${{ fmt(m.stakes.yes1) }}</span>
-          </div>
-          <div class="flex justify-between items-center p-1.5 rounded bg-slate-950/20">
-            <span class="text-emerald-400 text-[11px]">✅ YES {{ m.pair[1].name }}</span>
-            <span class="text-slate-300 font-bold">${{ fmt(m.stakes.yes2) }}</span>
-          </div>
-          <div class="flex justify-between items-center p-1.5 rounded bg-slate-950/20">
-            <span class="text-rose-400 text-[11px]">❌ NO {{ m.pair[0].name }}</span>
-            <span class="text-slate-300 font-bold">${{ fmt(m.stakes.no1) }}</span>
-          </div>
-          <div class="flex justify-between items-center p-1.5 rounded bg-slate-950/20">
-            <span class="text-rose-400 text-[11px]">❌ NO {{ m.pair[1].name }}</span>
-            <span class="text-slate-300 font-bold">${{ fmt(m.stakes.no2) }}</span>
-          </div>
+          <div class="flex justify-between items-center p-1.5 rounded bg-slate-950/20"><span class="text-emerald-400 text-[11px]">✅ YES {{ m.pair[0].name }}</span><span class="text-slate-300 font-bold">${{ fmt(m.stakes.yes1) }}</span></div>
+          <div class="flex justify-between items-center p-1.5 rounded bg-slate-950/20"><span class="text-emerald-400 text-[11px]">✅ YES {{ m.pair[1].name }}</span><span class="text-slate-300 font-bold">${{ fmt(m.stakes.yes2) }}</span></div>
+          <div class="flex justify-between items-center p-1.5 rounded bg-slate-950/20"><span class="text-rose-400 text-[11px]">❌ NO {{ m.pair[0].name }}</span><span class="text-slate-300 font-bold">${{ fmt(m.stakes.no1) }}</span></div>
+          <div class="flex justify-between items-center p-1.5 rounded bg-slate-950/20"><span class="text-rose-400 text-[11px]">❌ NO {{ m.pair[1].name }}</span><span class="text-slate-300 font-bold">${{ fmt(m.stakes.no2) }}</span></div>
         </div>
       </div>
-      <div class="mt-4 pt-2.5 border-t border-slate-800/80 flex justify-between items-center bg-amber-500/[0.02] p-1.5 rounded">
-        <span class="text-xs text-slate-400 font-semibold font-mono">🎲 PARLAY OPTION (NO/NO)</span>
-        <span class="text-amber-400 font-mono font-bold text-sm">${{ fmt(m.stakes.parlay) }}</span>
-      </div>
+      <div class="mt-4 pt-2.5 border-t border-slate-800/80 flex justify-between items-center bg-amber-500/[0.02] p-1.5 rounded"><span class="text-xs text-slate-400 font-semibold font-mono">🎲 PARLAY OPTION (NO/NO)</span><span class="text-amber-400 font-mono font-bold text-sm">${{ fmt(m.stakes.parlay) }}</span></div>
     </div>
   </div>
 
   <div v-if="matrices.length" class="panel-card p-5 mb-6">
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
-      <b class="text-xs uppercase tracking-widest text-slate-400 flex items-center gap-2">
-        📅 Time-Series Round Ledger
-      </b>
+      <b class="text-xs uppercase tracking-widest text-slate-400 flex items-center gap-2">📅 Time-Series Round Ledger</b>
       <div class="flex items-center gap-2 w-full sm:w-auto justify-between">
         <button class="btn-secondary py-1 px-3 text-sm" @click="prevMonth">◀</button>
         <span class="px-4 py-1 bg-slate-950/60 border border-slate-800 rounded-lg text-sm font-mono text-amber-400 min-w-[140px] text-center">{{ monthNames[currentMonth] }} {{ currentYear }}</span>
         <button class="btn-secondary py-1 px-3 text-sm" @click="nextMonth">▶</button>
       </div>
     </div>
-    
     <div class="calendar-grid">
       <div v-for="d in ['MON','TUE','WED','THU','FRI','SAT','SUN']" :key="d" class="text-center text-[10px] font-bold text-slate-500 uppercase tracking-wider py-1">{{ d }}</div>
-      <div v-for="day in calendarDays" :key="day.dateStr || day.id" class="calendar-day" :class="{'has-record': day.hasRecord, 'empty-day opacity-0 pointer-events-none': !day.dayNum}" @click="selectDate(day.dateStr)">
-        <span v-if="day.dayNum">{{ day.dayNum }}</span>
-      </div>
+      <div v-for="day in calendarDays" :key="day.dateStr || day.id" class="calendar-day" :class="{'has-record': day.hasRecord, 'empty-day opacity-0 pointer-events-none': !day.dayNum}" @click="selectDate(day.dateStr)"><span v-if="day.dayNum">{{ day.dayNum }}</span></div>
     </div>
-
-    <div v-if="selectedDateStr" class="mt-5 p-4 bg-slate-950/60 border border-slate-800/80 rounded-xl animate-fadeIn">
+    <div v-if="selectedDateStr" class="mt-5 p-4 bg-slate-950/60 border border-slate-800/80 rounded-xl">
       <div class="font-mono text-sm text-amber-400 border-b border-slate-800/60 pb-2 mb-3 font-bold">Modifying Node Index: {{ selectedDateStr }}</div>
       <div class="flex flex-col md:flex-row gap-4 items-end justify-between">
         <div class="flex flex-wrap gap-4 items-center">
-          <div class="flex flex-col">
-            <label class="text-xs text-slate-400 mb-1">State Failure Count (0-4)</label>
-            <input type="number" v-model.number="recordForm.noCount" min="0" max="4" style="width:110px" @change="updateNetFromNoCount"/>
-          </div>
-          <div class="flex flex-col">
-            <label class="text-xs text-slate-400 mb-1">Calculated Delta USD</label>
-            <input type="number" v-model.number="recordForm.netUSD" style="width:140px"/>
-          </div>
+          <div class="flex flex-col"><label class="text-xs text-slate-400 mb-1">State Failure Count (0-4)</label><input type="number" v-model.number="recordForm.noCount" min="0" max="4" style="width:110px" @change="updateNetFromNoCount"/></div>
+          <div class="flex flex-col"><label class="text-xs text-slate-400 mb-1">Calculated Delta USD</label><input type="number" v-model.number="recordForm.netUSD" style="width:140px"/></div>
         </div>
-        <div class="flex gap-2 w-full md:w-auto justify-end">
-          <button class="btn-secondary py-2 px-5 text-sm" @click="clearRecord">Delete Node</button>
-          <button class="btn-gold py-2 px-6 text-sm" @click="saveRecord">Commit Node</button>
-        </div>
+        <div class="flex gap-2 w-full md:w-auto justify-end"><button class="btn-secondary py-2 px-5 text-sm" @click="clearRecord">Delete Node</button><button class="btn-gold py-2 px-6 text-sm" @click="saveRecord">Commit Node</button></div>
       </div>
     </div>
   </div>
 
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-    <div v-if="totalRounds > 0" class="panel-card p-4 lg:col-span-2">
-      <div class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">📊 Delta Return Variance Matrix</div>
-      <canvas id="profitBarChart" style="max-height: 260px; width:100%"></canvas>
-    </div>
-
-    <div v-if="Object.keys(records).length" class="panel-card p-4" :class="{'lg:col-span-3': totalRounds === 0}">
-      <div class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">📋 Automated Pipeline Audit Logs</div>
-      <div class="max-h-[260px] overflow-y-auto custom-scrollbar pr-1 space-y-1">
-        <div v-for="([date, rec]) in sortedRecords" :key="date" class="flex justify-between items-center border-b border-slate-800/40 py-2 text-xs font-mono">
-          <span class="text-slate-400">{{ date }}</span>
-          <div class="flex gap-4 items-center">
-            <span class="text-slate-500">[{{ rec.noCount }} Negations]</span>
-            <span :class="rec.netUSD>=0?'text-emerald-400':'text-rose-400'" class="font-bold">${{ fmt(rec.netUSD) }}</span>
-          </div>
-        </div>
-      </div>
-    </div>
+    <div v-if="totalRounds > 0" class="panel-card p-4 lg:col-span-2"><div class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">📊 Delta Return Variance Matrix</div><canvas id="profitBarChart" style="max-height: 260px; width:100%"></canvas></div>
+    <div v-if="Object.keys(records).length" class="panel-card p-4" :class="{'lg:col-span-3': totalRounds === 0}"><div class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">📋 Automated Pipeline Audit Logs</div><div class="max-h-[260px] overflow-y-auto custom-scrollbar pr-1 space-y-1"><div v-for="([date, rec]) in sortedRecords" :key="date" class="flex justify-between items-center border-b border-slate-800/40 py-2 text-xs font-mono"><span class="text-slate-400">{{ date }}</span><div class="flex gap-4 items-center"><span class="text-slate-500">[{{ rec.noCount }} Negations]</span><span :class="rec.netUSD>=0?'text-emerald-400':'text-rose-400'" class="font-bold">${{ fmt(rec.netUSD) }}</span></div></div></div></div>
   </div>
 
 </div>
 </div>
 
 <script>
-// ---------- SPLASH CONTROLLER (FIXED) ----------
-let splashRemoved = false;
+// Simple splash removal: auto after 2.5 seconds or on skip button click
+setTimeout(function() {
+  var splash = document.getElementById('splashScreen');
+  var app = document.getElementById('app');
+  if (splash && splash.parentNode) {
+    splash.style.opacity = '0';
+    setTimeout(function() {
+      if (splash.parentNode) splash.remove();
+      if (app) app.style.display = 'block';
+    }, 400);
+  }
+}, 2500);
 
-function removeSplash() {
-  if (splashRemoved) return;
-  splashRemoved = true;
-
-  const splash = document.getElementById("splashScreen");
-  const app = document.getElementById("app");
-
-  if (!splash || !app) return;
-
-  splash.style.pointerEvents = "none";
-  splash.style.transition = "opacity .45s ease";
-  splash.style.opacity = "0";
-
-  setTimeout(() => {
-    splash.remove();
-    app.style.display = "block";
-    requestAnimationFrame(() => {
-      app.style.opacity = "1";
-    });
-  }, 450);
+var skipBtn = document.getElementById('skipSplashBtn');
+if (skipBtn) {
+  skipBtn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    var splash = document.getElementById('splashScreen');
+    var app = document.getElementById('app');
+    if (splash && splash.parentNode) {
+      splash.style.opacity = '0';
+      setTimeout(function() {
+        if (splash.parentNode) splash.remove();
+        if (app) app.style.display = 'block';
+      }, 400);
+    }
+  });
 }
-
-// Wait until page is actually ready
-window.addEventListener("load", () => {
-  const app = document.getElementById("app");
-  if (app) {
-    app.style.display = "none";
-    app.style.opacity = "0";
-    app.style.transition = "opacity .35s ease";
-  }
-
-  // Auto launch
-  setTimeout(removeSplash, 2500);
-
-  // Skip button
-  const skipBtn = document.getElementById("skipSplashBtn");
-  if (skipBtn) {
-    skipBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      removeSplash();
-    });
-  }
-
-  // Tap anywhere to continue (once)
-  document.addEventListener("click", removeSplash, { once: true });
-});
 
 const { createApp, reactive, ref, computed, onMounted, watch, nextTick } = Vue;
 
@@ -440,7 +353,6 @@ createApp({
     const records = ref({});
     const periodProfit = ref(0);
     const periodRounds = ref(0);
-    
     const selectedDateStr = ref(null);
     const recordForm = reactive({ noCount: 2, netUSD: 0 });
     const currentYear = ref(new Date().getFullYear());
@@ -483,4 +395,29 @@ createApp({
 
     function reinvestPeriod() {
       if (periodProfit.value === 0) return;
-      state.bankroll += periodProfit.
+      state.bankroll += periodProfit.value;
+      periodProfit.value = 0;
+      periodRounds.value = 0;
+      savePeriodStats();
+      generate();
+    }
+    function updateBaseBankroll() { generate(); }
+    function savePeriodStats() {
+      localStorage.setItem("TiDynPeriodProfit", periodProfit.value);
+      localStorage.setItem("TiDynPeriodRounds", periodRounds.value);
+    }
+    function loadPeriodStats() {
+      const pProfit = localStorage.getItem("TiDynPeriodProfit");
+      const pRounds = localStorage.getItem("TiDynPeriodRounds");
+      if (pProfit !== null) periodProfit.value = Number(pProfit);
+      if (pRounds !== null) periodRounds.value = Number(pRounds);
+    }
+    function generatePairs() {
+      const pairs = [];
+      for (let i = 0; i < state.matches.length; i++)
+        for (let j = i+1; j < state.matches.length; j++)
+          pairs.push([state.matches[i], state.matches[j]]);
+      return pairs;
+    }
+    function solveMatrix(mA, mB, S) {
+      if (S <= 0) return { yes1:0, yes2:0, no
