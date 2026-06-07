@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TiDyn Matrix – Final Stable</title>
+<title>TiDyn Matrix – Bar Chart (Red/Green)</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -18,7 +18,7 @@
   .calendar-day{background:#0f121b;border-radius:12px;padding:8px;text-align:center;cursor:pointer}
   .has-record{background:#2a2a1c;border:1px solid #c5a059;color:#ffd966}
   .stat-card{background:#0a0e16;border-radius:20px;padding:12px;text-align:center}
-  .splash-screen{position:fixed;top:0;left:0;width:100%;height:100%;background:#000;z-index:99999;display:flex;justify-content:center;align-items:center;opacity:1;transition:opacity 1s ease; pointer-events:none;}
+  .splash-screen{position:fixed;top:0;left:0;width:100%;height:100%;background:#000;z-index:99999;display:flex;justify-content:center;align-items:center;opacity:1;transition:opacity 1s ease}
   .splash-screen.hide{opacity:0;pointer-events:none}
   .splash-logo{width:80%;max-width:400px;text-align:center;background:linear-gradient(135deg,#c5a059,#f5d97f);-webkit-background-clip:text;background-clip:text;color:transparent;font-size:3rem;font-weight:bold;font-family:monospace}
   .splash-logo span{display:block;font-size:1rem;color:#cbd5e1;background:none}
@@ -38,7 +38,7 @@
     <div class="text-2xl font-bold text-amber-400">TiDyn MATRIX v2.5</div>
     <div class="text-right">
       <div>Base bankroll: <span class="text-amber-400 font-bold">${{ fmt(state.bankroll) }}</span></div>
-      <div class="text-sm text-gray-400">Total bankroll (incl. all profits): ${{ fmt(currentBankroll) }}</div>
+      <div class="text-sm text-gray-400">Total bankroll (including all profits): ${{ fmt(currentBankroll) }}</div>
     </div>
   </div>
 
@@ -66,7 +66,6 @@
         <div class="text-xs mt-1">No (pre) <input type="number" step="0.01" v-model.number="m.noOdds" class="mt-1" @change="generate"/></div>
       </div>
     </div>
-    <div v-if="oddsWarning" class="text-red-400 text-xs mt-2">⚠️ Odds must be >1. Stakes may be zero.</div>
   </div>
 
   <div v-if="matrices.length" class="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
@@ -105,7 +104,7 @@
           <input type="number" v-model.number="recordForm.noCount" min="0" max="4" style="width:90px" @change="updateNetFromNoCount"/>
         </div>
         <div><div class="text-xs">Net P/L (USD)</div>
-          <input type="number" v-model.number="recordForm.netUSD" style="width:120px" step="0.01"/>
+          <input type="number" v-model.number="recordForm.netUSD" style="width:120px"/>
         </div>
         <button class="btn-gold py-1 px-4" @click="saveRecord">Save</button>
         <button class="btn-secondary py-1 px-4" @click="clearRecord">Delete</button>
@@ -114,9 +113,10 @@
     </div>
   </div>
 
-  <div v-if="totalRounds > 1" class="card mt-5">
-    <div class="font-bold mb-2">📈 Daily profit evolution (all time)</div>
-    <canvas id="profitChart" style="max-height: 280px; width:100%"></canvas>
+  <!-- Bar chart (candlestick style) -->
+  <div v-if="totalRounds > 0" class="card mt-5">
+    <div class="font-bold mb-2">📊 Daily Profit / Loss (red = 0-1 No's, green = 2-4 No's)</div>
+    <canvas id="profitBarChart" style="max-height: 280px; width:100%"></canvas>
   </div>
 
   <div v-if="Object.keys(records).length" class="card mt-5">
@@ -149,128 +149,124 @@ createApp({
     });
     const matrices = ref([]);
     const records = ref({});
+    // Period tracking (since last reinvest)
     const periodProfit = ref(0);
     const periodRounds = ref(0);
+    
     const selectedDateStr = ref(null);
     const recordForm = reactive({ noCount: 2, netUSD: 0 });
     const currentYear = ref(new Date().getFullYear());
     const currentMonth = ref(new Date().getMonth());
     const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-    let chartInstance = null;
+    let barChartInstance = null;
 
-    const fmt = n => Number(n).toFixed(2);
-    const safeNum = (val, def=0) => { let x = Number(val); return isNaN(x) ? def : x; };
-
+    const fmt = (n) => Number(n).toFixed(2);
+    
+    // Total bankroll = base + sum of ALL records (historical)
     const currentBankroll = computed(() => {
-      let sum = safeNum(state.bankroll);
-      for (let k in records.value) sum += safeNum(records.value[k].netUSD);
+      let sum = state.bankroll;
+      for (let k in records.value) sum += records.value[k].netUSD;
       return sum;
     });
+    
+    // Per matrix stake = 2.78% of BASE bankroll (constant during period)
     const matrixStake = computed(() => {
-      const base = safeNum(state.bankroll);
+      const base = state.bankroll;
       if (base <= 0) return 0;
       return base * 0.0278;
     });
-    const oddsWarning = computed(() => state.matches.some(m => safeNum(m.yesOdds) <= 1 || safeNum(m.noOdds) <= 1));
 
     // All-time stats
     const totalRounds = computed(() => Object.keys(records.value).length);
     const totalNetProfit = computed(() => {
       let sum = 0;
-      for (let k in records.value) sum += safeNum(records.value[k].netUSD);
+      for (let k in records.value) sum += records.value[k].netUSD;
       return sum;
     });
     const avgProfit = computed(() => totalRounds.value ? totalNetProfit.value / totalRounds.value : 0);
     const bestDayProfit = computed(() => {
       let best = -Infinity;
-      for (let k in records.value) best = Math.max(best, safeNum(records.value[k].netUSD));
+      for (let k in records.value) best = Math.max(best, records.value[k].netUSD);
       return best === -Infinity ? 0 : best;
     });
     const worstDayProfit = computed(() => {
       let worst = Infinity;
-      for (let k in records.value) worst = Math.min(worst, safeNum(records.value[k].netUSD));
+      for (let k in records.value) worst = Math.min(worst, records.value[k].netUSD);
       return worst === Infinity ? 0 : worst;
     });
     const sortedRecords = computed(() => Object.entries(records.value).sort((a,b)=>new Date(b[0])-new Date(a[0])));
 
-    // --- exact 5x5 linear solver with full error handling ---
-    function solveMatrixExact(mA, mB, S) {
-      try {
-        S = safeNum(S);
-        if (S <= 0) return { yes1:0, yes2:0, no1:0, no2:0, parlay:0, total:0 };
-        const Y1 = safeNum(mA.yesOdds, 1.01);
-        const N1 = safeNum(mA.noOdds, 1.01);
-        const Y2 = safeNum(mB.yesOdds, 1.01);
-        const N2 = safeNum(mB.noOdds, 1.01);
-        if (Y1 <= 1 || N1 <= 1 || Y2 <= 1 || N2 <= 1) return { yes1:0, yes2:0, no1:0, no2:0, parlay:0, total:0 };
-        const A = [
-          [ Y1-1, Y2-1, -1, -1, -1 ],
-          [ Y1-1, -1, -1, N2-1, -1 ],
-          [ -1, Y2-1, N1-1, -1, -1 ],
-          [ -1, -1, N1-1, N2-1, N1*N2-1 ],
-          [ 1, 1, 1, 1, 1 ]
-        ];
-        const B = [ -0.3*S, -0.3*S, -0.3*S, 2.25*S, S ];
-        const n = 5;
-        let M = A.map(row => [...row]);
-        let R = [...B];
-        for (let i = 0; i < n; i++) {
-          let maxRow = i;
-          for (let k = i+1; k < n; k++) if (Math.abs(M[k][i]) > Math.abs(M[maxRow][i])) maxRow = k;
-          [M[i], M[maxRow]] = [M[maxRow], M[i]];
-          [R[i], R[maxRow]] = [R[maxRow], R[i]];
-          for (let k = i+1; k < n; k++) {
-            const factor = M[k][i] / M[i][i];
-            for (let j = i; j < n; j++) M[k][j] -= factor * M[i][j];
-            R[k] -= factor * R[i];
-          }
-        }
-        const X = new Array(n).fill(0);
-        for (let i = n-1; i >= 0; i--) {
-          let sum = 0;
-          for (let j = i+1; j < n; j++) sum += M[i][j] * X[j];
-          X[i] = (R[i] - sum) / M[i][i];
-        }
-        let [a,b,c,d,e] = X;
-        a = Math.max(0,a); b = Math.max(0,b); c = Math.max(0,c); d = Math.max(0,d); e = Math.max(0,e);
-        const total = a+b+c+d+e;
-        if (total > 0 && Math.abs(total - S) > 0.01) {
-          const factor = S / total;
-          a *= factor; b *= factor; c *= factor; d *= factor; e *= factor;
-        }
-        return { yes1: a, yes2: b, no1: c, no2: d, parlay: e, total: a+b+c+d+e };
-      } catch(e) {
-        console.warn("Solver error", e);
-        return { yes1:0, yes2:0, no1:0, no2:0, parlay:0, total:0 };
-      }
+    // ---- reinvest period: add period profit to base bankroll, reset period stats ----
+    function reinvestPeriod() {
+      if (periodProfit.value === 0) return;
+      state.bankroll += periodProfit.value;
+      periodProfit.value = 0;
+      periodRounds.value = 0;
+      savePeriodStats();
+      generate(); // regenerate matrices with new base bankroll
     }
 
+    // ---- manual base bankroll change (e.g., editing input) ----
+    function updateBaseBankroll() {
+      generate();
+    }
+
+    // ---- save period stats to localStorage ----
+    function savePeriodStats() {
+      localStorage.setItem("TiDynPeriodProfit", periodProfit.value);
+      localStorage.setItem("TiDynPeriodRounds", periodRounds.value);
+    }
+    function loadPeriodStats() {
+      const pProfit = localStorage.getItem("TiDynPeriodProfit");
+      const pRounds = localStorage.getItem("TiDynPeriodRounds");
+      if (pProfit !== null) periodProfit.value = Number(pProfit);
+      if (pRounds !== null) periodRounds.value = Number(pRounds);
+    }
+
+    // ---- generate matrices ----
     function generatePairs() {
       const pairs = [];
-      for (let i = 0; i < state.matches.length; i++)
-        for (let j = i+1; j < state.matches.length; j++)
+      for (let i = 0; i < state.matches.length; i++) {
+        for (let j = i+1; j < state.matches.length; j++) {
           pairs.push([state.matches[i], state.matches[j]]);
+        }
+      }
       return pairs;
     }
 
+    function solveMatrix(mA, mB, S) {
+      if (S <= 0) return { yes1:0, yes2:0, no1:0, no2:0, parlay:0, total:0 };
+      const Y1 = mA.yesOdds - 1;
+      const Y2 = mB.yesOdds - 1;
+      const L = 0.3 * S;
+      const denom = mA.yesOdds + mB.yesOdds;
+      let a = (0.7 * S) / denom;
+      let b = a;
+      let c = a * (mA.yesOdds / mA.noOdds);
+      let d = b * (mB.yesOdds / mB.noOdds);
+      let e = a*Y1 + b*Y2 + L - c - d;
+      if (isNaN(e) || e < 0) e = 0;
+      return { yes1: a, yes2: b, no1: c, no2: d, parlay: e, total: a+b+c+d+e };
+    }
+
     function generate() {
-      if (oddsWarning.value || matrixStake.value <= 0) {
+      const S = matrixStake.value;
+      if (S <= 0) {
         matrices.value = [];
         return;
       }
-      const S = matrixStake.value;
       const pairs = generatePairs();
       const newMatrices = [];
       for (let [mA, mB] of pairs) {
-        const stakes = solveMatrixExact(mA, mB, S);
-        const parlayOdds = safeNum(mA.noOdds) * safeNum(mB.noOdds);
+        const stakes = solveMatrix(mA, mB, S);
+        const parlayOdds = mA.noOdds * mB.noOdds;
         newMatrices.push({ pair: [mA, mB], parlayOdds, stakes });
       }
       matrices.value = newMatrices;
       updateExpectedNetMap();
     }
 
-    // --- expected net for each No count ---
+    // ---- expected net for each No count ----
     function computeExpectedNetForNoCount() {
       if (matrices.value.length === 0) return {0:0,1:0,2:0,3:0,4:0};
       const combos = {0:[[]],1:[],2:[],3:[],4:[[0,1,2,3]]};
@@ -294,8 +290,8 @@ createApp({
             const aIsNo = noSet.has(aIdx);
             const bIsNo = noSet.has(bIdx);
             const st = m.stakes;
-            const Y1 = safeNum(m.pair[0].yesOdds), N1 = safeNum(m.pair[0].noOdds);
-            const Y2 = safeNum(m.pair[1].yesOdds), N2 = safeNum(m.pair[1].noOdds);
+            const Y1 = m.pair[0].yesOdds, N1 = m.pair[0].noOdds;
+            const Y2 = m.pair[1].yesOdds, N2 = m.pair[1].noOdds;
             let net = 0;
             if (!aIsNo && !bIsNo) net = st.yes1*(Y1-1) + st.yes2*(Y2-1) - (st.no1+st.no2+st.parlay);
             else if (!aIsNo && bIsNo) net = st.yes1*(Y1-1) + st.no2*(N2-1) - (st.yes2+st.no1+st.parlay);
@@ -315,56 +311,97 @@ createApp({
     function updateExpectedNetMap() { expectedNetMap.value = computeExpectedNetForNoCount(); }
     function updateNetFromNoCount() {
       const val = expectedNetMap.value[recordForm.noCount];
-      recordForm.netUSD = safeNum(val);
+      if (val !== undefined) recordForm.netUSD = Math.round(val * 100) / 100;
     }
+
     watch(matrices, () => {
       updateExpectedNetMap();
       if (selectedDateStr.value && !records.value[selectedDateStr.value]) updateNetFromNoCount();
     });
 
-    // --- period & localStorage ---
-    function loadPeriodStats() {
-      try {
-        const pProfit = localStorage.getItem("TiDynPeriodProfit");
-        const pRounds = localStorage.getItem("TiDynPeriodRounds");
-        if (pProfit !== null) periodProfit.value = safeNum(pProfit);
-        if (pRounds !== null) periodRounds.value = safeNum(pRounds);
-      } catch(e) {}
-    }
-    function savePeriodStats() {
-      try {
-        localStorage.setItem("TiDynPeriodProfit", periodProfit.value);
-        localStorage.setItem("TiDynPeriodRounds", periodRounds.value);
-      } catch(e) {}
-    }
+    // ---- records & localStorage ----
     function loadRecords() {
-      try {
-        const stored = localStorage.getItem("TiDynRecords");
-        if (stored) records.value = JSON.parse(stored);
-      } catch(e) { records.value = {}; }
+      const stored = localStorage.getItem("TiDynRecords");
+      if (stored) records.value = JSON.parse(stored);
     }
     function saveRecords() {
-      try {
-        localStorage.setItem("TiDynRecords", JSON.stringify(records.value));
-      } catch(e) {}
-      updateChart();
+      localStorage.setItem("TiDynRecords", JSON.stringify(records.value));
+      updateBarChart();
     }
 
-    function reinvestPeriod() {
-      const profit = periodProfit.value;
-      if (profit === 0) return;
-      state.bankroll += profit;
-      periodProfit.value = 0;
-      periodRounds.value = 0;
-      savePeriodStats();
-      generate();
+    // ---- Bar chart (candlestick style) ----
+    function updateBarChart() {
+      const canvas = document.getElementById('profitBarChart');
+      if (!canvas) return;
+      const dates = Object.keys(records.value).sort();
+      if (dates.length === 0) return;
+      const profits = dates.map(d => records.value[d].netUSD);
+      const noCounts = dates.map(d => records.value[d].noCount);
+      // Bar colors: red if noCount <= 1, green if 2-4
+      const colors = noCounts.map(nc => nc <= 1 ? '#ef4444' : '#22c55e');
+      
+      if (barChartInstance) {
+        barChartInstance.destroy();
+      }
+      const ctx = canvas.getContext('2d');
+      barChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: dates,
+          datasets: [{
+            label: 'Net P/L ($)',
+            data: profits,
+            backgroundColor: colors,
+            borderColor: colors,
+            borderWidth: 1,
+            borderRadius: 4,
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          plugins: {
+            tooltip: {
+              callbacks: {
+                label: (ctx) => `$${ctx.raw.toFixed(2)}`
+              }
+            },
+            legend: { display: false }
+          },
+          scales: {
+            y: {
+              title: { display: true, text: 'Profit / Loss (USD)', color: '#9ca3af' },
+              grid: { color: '#1e2229' },
+              ticks: { callback: (val) => `$${val}` }
+            },
+            x: {
+              title: { display: true, text: 'Date', color: '#9ca3af' },
+              grid: { display: false },
+              ticks: { maxRotation: 45, minRotation: 45, autoSkip: true, maxTicksLimit: 8 }
+            }
+          }
+        }
+      });
     }
 
-    function updateBaseBankroll() {
-      generate();
-    }
+    watch(records, () => updateBarChart(), { deep: true });
 
-    // --- record saving / deletion ---
+    // ---- calendar helpers ----
+    function getDaysInMonth(y,m) { return new Date(y, m+1, 0).getDate(); }
+    function getFirstDayOffset(y,m) { let d = new Date(y,m,1).getDay(); return d === 0 ? 6 : d-1; }
+    const calendarDays = computed(() => {
+      const y = currentYear.value, m = currentMonth.value;
+      const daysInMonth = getDaysInMonth(y,m);
+      const offset = getFirstDayOffset(y,m);
+      let days = [];
+      for (let i=0; i<offset; i++) days.push({ dayNum: null, dateStr: null, hasRecord: false, id: `e-${i}` });
+      for (let d=1; d<=daysInMonth; d++) {
+        const dateStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        days.push({ dayNum: d, dateStr, hasRecord: !!records.value[dateStr], id: dateStr });
+      }
+      return days;
+    });
+
     function selectDate(dateStr) {
       if (!dateStr) return;
       selectedDateStr.value = dateStr;
@@ -379,11 +416,12 @@ createApp({
     }
     function saveRecord() {
       if (!selectedDateStr.value) return;
-      const net = safeNum(recordForm.netUSD);
+      const net = recordForm.netUSD;
       records.value[selectedDateStr.value] = {
         noCount: recordForm.noCount,
         netUSD: net
       };
+      // Update period stats
       periodProfit.value += net;
       periodRounds.value++;
       savePeriodStats();
@@ -392,9 +430,9 @@ createApp({
     }
     function clearRecord() {
       if (!selectedDateStr.value) return;
-      const old = records.value[selectedDateStr.value];
-      if (old) {
-        periodProfit.value -= safeNum(old.netUSD);
+      const oldRec = records.value[selectedDateStr.value];
+      if (oldRec) {
+        periodProfit.value -= oldRec.netUSD;
         periodRounds.value--;
         savePeriodStats();
       }
@@ -402,35 +440,19 @@ createApp({
       saveRecords();
       selectedDateStr.value = null;
     }
-
-    // --- chart ---
-    function updateChart() {
-      if (!chartInstance && document.getElementById('profitChart')) {
-        const ctx = document.getElementById('profitChart').getContext('2d');
-        chartInstance = new Chart(ctx, {
-          type: 'line',
-          data: { labels: [], datasets: [{ label: 'Daily P/L ($)', data: [], borderColor: '#c5a059', tension: 0.2 }] },
-          options: { responsive: true, maintainAspectRatio: true }
-        });
-      }
-      if (chartInstance) {
-        const dates = Object.keys(records.value).sort();
-        const profits = dates.map(d => safeNum(records.value[d].netUSD));
-        chartInstance.data.labels = dates;
-        chartInstance.data.datasets[0].data = profits;
-        chartInstance.update();
-      }
+    function prevMonth() {
+      if (currentMonth.value === 0) { currentMonth.value = 11; currentYear.value--; }
+      else currentMonth.value--;
     }
-    watch(records, () => updateChart(), { deep: true });
+    function nextMonth() {
+      if (currentMonth.value === 11) { currentMonth.value = 0; currentYear.value++; }
+      else currentMonth.value++;
+    }
 
-    // --- calendar helpers ---
-    function getDaysInMonth(y,m) { return new Date(y, m+1, 0).getDate(); }
-    function getFirstDayOffset(y,m) { let d = new Date(y,m,1).getDay(); return d === 0 ? 6 : d-1; }
-    const calendarDays = computed(() => {
-      const y = currentYear.value, m = currentMonth.value;
-      const daysInMonth = getDaysInMonth(y,m);
-      const offset = getFirstDayOffset(y,m);
-      let days = [];
-      for (let i=0; i<offset; i++) days.push({ dayNum: null, dateStr: null, hasRecord: false, id: `e-${i}` });
-      for (let d=1; d<=daysInMonth; d++) {
-        const dateStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padSt
+    // ---- splash screen ----
+    onMounted(() => {
+      loadRecords();
+      loadPeriodStats();
+      setTimeout(() => {
+        const splash = document.getElementById("splash");
+ 
