@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>TiDyn Matrix – Advanced Terminal</title>
+<title>TiDyn Matrix – Splash Fixed</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -94,13 +94,12 @@
     box-shadow: 0 0 15px rgba(212, 175, 55, 0.4);
   }
   
-  /* Main app hidden until splash removed */
+  /* Main app hidden initially */
   #app {
     display: none;
-    opacity: 1;
   }
   
-  /* Premium UI Overhauls (unchanged) */
+  /* Rest of UI styles (same as before) */
   .panel-card {
     background: rgba(22, 28, 41, 0.65);
     border: 1px solid rgba(255, 255, 255, 0.05);
@@ -153,7 +152,6 @@
     border-color: #d4af37 !important;
     box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.1);
   }
-  
   .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
   .calendar-day {
     background: rgba(15, 21, 32, 0.5);
@@ -199,9 +197,40 @@
     <div class="big">TiDyn</div>
     <div class="small">Multiverse Matrix</div>
   </div>
-  <div class="splash-sub">loading quantitative system...</div>
+  <div class="splash-sub">initializing...</div>
   <button id="skipSplashBtn" class="skip-btn">Access System</button>
 </div>
+
+<!-- Simple script to remove splash after 2.5 seconds or on click -->
+<script>
+  (function() {
+    var splash = document.getElementById('splashScreen');
+    var app = document.getElementById('app');
+    function removeSplash() {
+      if (!splash) return;
+      splash.style.transition = 'opacity 0.4s';
+      splash.style.opacity = '0';
+      setTimeout(function() {
+        if (splash.parentNode) splash.parentNode.removeChild(splash);
+        if (app) app.style.display = 'block';
+      }, 400);
+    }
+    // Auto after 2.5 seconds
+    setTimeout(removeSplash, 2500);
+    // Skip button click
+    var skipBtn = document.getElementById('skipSplashBtn');
+    if (skipBtn) {
+      skipBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        removeSplash();
+      });
+    }
+    // Also tap anywhere on splash
+    if (splash) {
+      splash.addEventListener('click', removeSplash);
+    }
+  })();
+</script>
 
 <!-- Main app (hidden initially) -->
 <div id="app">
@@ -244,9 +273,7 @@
   <p class="text-[11px] text-slate-500 italic mt-2 mb-6 px-1">* Stake allocation locks during matching window cycles. "Reinvest Period" rolls profit segments directly down into base asset fields and flushes cyclical variables.</p>
 
   <div class="panel-card p-5 mb-6">
-    <div class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-      <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span> Input Streams (BTTS Yes Live / No Pre-Match)
-    </div>
+    <div class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span> Input Streams (BTTS Yes Live / No Pre-Match)</div>
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       <div v-for="(m,idx) in state.matches" :key="idx" class="bg-slate-900/40 border border-slate-800/80 rounded-xl p-3 flex flex-col justify-between">
         <div class="font-bold text-slate-200 border-b border-slate-800/60 pb-1.5 mb-2 flex justify-between items-center"><span>Asset Class {{ m.name }}</span><span class="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded">Active</span></div>
@@ -300,42 +327,13 @@
 
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <div v-if="totalRounds > 0" class="panel-card p-4 lg:col-span-2"><div class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">📊 Delta Return Variance Matrix</div><canvas id="profitBarChart" style="max-height: 260px; width:100%"></canvas></div>
-    <div v-if="Object.keys(records).length" class="panel-card p-4" :class="{'lg:col-span-3': totalRounds === 0}"><div class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">📋 Automated Pipeline Audit Logs</div><div class="max-h-[260px] overflow-y-auto custom-scrollbar pr-1 space-y-1"><div v-for="([date, rec]) in sortedRecords" :key="date" class="flex justify-between items-center border-b border-slate-800/40 py-2 text-xs font-mono"><span class="text-slate-400">{{ date }}</span><div class="flex gap-4 items-center"><span class="text-slate-500">[{{ rec.noCount }} Negations]</span><span :class="rec.netUSD>=0?'text-emerald-400':'text-rose-400'" class="font-bold">${{ fmt(rec.netUSD) }}</span></div></div></div></div>
+    <div v-if="Object.keys(records).length" class="panel-card p-4"><div class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">📋 Automated Pipeline Audit Logs</div><div class="max-h-[260px] overflow-y-auto custom-scrollbar pr-1 space-y-1"><div v-for="([date, rec]) in sortedRecords" :key="date" class="flex justify-between items-center border-b border-slate-800/40 py-2 text-xs font-mono"><span class="text-slate-400">{{ date }}</span><div class="flex gap-4 items-center"><span class="text-slate-500">[{{ rec.noCount }} Negations]</span><span :class="rec.netUSD>=0?'text-emerald-400':'text-rose-400'" class="font-bold">${{ fmt(rec.netUSD) }}</span></div></div></div></div>
   </div>
 
 </div>
 </div>
 
 <script>
-// Simple splash removal: auto after 2.5 seconds or on skip button click
-setTimeout(function() {
-  var splash = document.getElementById('splashScreen');
-  var app = document.getElementById('app');
-  if (splash && splash.parentNode) {
-    splash.style.opacity = '0';
-    setTimeout(function() {
-      if (splash.parentNode) splash.remove();
-      if (app) app.style.display = 'block';
-    }, 400);
-  }
-}, 2500);
-
-var skipBtn = document.getElementById('skipSplashBtn');
-if (skipBtn) {
-  skipBtn.addEventListener('click', function(e) {
-    e.stopPropagation();
-    var splash = document.getElementById('splashScreen');
-    var app = document.getElementById('app');
-    if (splash && splash.parentNode) {
-      splash.style.opacity = '0';
-      setTimeout(function() {
-        if (splash.parentNode) splash.remove();
-        if (app) app.style.display = 'block';
-      }, 400);
-    }
-  });
-}
-
 const { createApp, reactive, ref, computed, onMounted, watch, nextTick } = Vue;
 
 createApp({
@@ -420,4 +418,5 @@ createApp({
       return pairs;
     }
     function solveMatrix(mA, mB, S) {
-      if (S <= 0) return { yes1:0, yes2:0, no
+      if (S <= 0) return { yes1:0, yes2:0, no1:0, no2:0, parlay:0, total:0 };
+      const Y1 = mA.yesOdds - 1,
