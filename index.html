@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>TiDyn Matrix – Fixed Splash</title>
+<title>TiDyn Matrix – Working Splash</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -24,10 +24,10 @@
     justify-content: center;
     align-items: center;
     flex-direction: column;
-    transition: opacity 0.8s ease-in-out;
+    transition: opacity 0.6s ease-out;
     opacity: 1;
   }
-  .splash-screen.hide {
+  .splash-screen.fade-out {
     opacity: 0;
     pointer-events: none;
   }
@@ -71,18 +71,13 @@
     letter-spacing: 2px;
   }
   
-  /* Main app container – hidden until splash removed */
+  /* Main app */
   #app {
-    display: none;
-    opacity: 0;
-    transition: opacity 0.5s;
-  }
-  #app.visible {
     display: block;
     opacity: 1;
   }
   
-  /* Rest of styles for cards, buttons, etc. */
+  /* Rest of UI styles */
   .card{background:#111318;border:1px solid #1e2229;border-radius:16px;padding:1rem}
   .btn-gold{background:#c5a059;color:#0b0c10;font-weight:700;padding:8px 16px;border-radius:40px;cursor:pointer}
   .btn-secondary{background:#1e293b;color:#cbd5e1;padding:6px 12px;border-radius:30px;cursor:pointer}
@@ -105,7 +100,7 @@
   <div class="splash-sub">quantitative edge system</div>
 </div>
 
-<!-- Main Vue app (hidden initially) -->
+<!-- Main Vue app -->
 <div id="app">
 <div class="max-w-7xl mx-auto px-4 py-4">
 
@@ -209,20 +204,14 @@
 </div>
 
 <script>
-// Remove splash after 2.5 seconds and show the app
+// Guaranteed splash removal after 2.5 seconds
 setTimeout(function() {
   var splash = document.getElementById('splashScreen');
   if (splash) {
-    splash.classList.add('hide');
-    // After fade out, remove splash and show app
+    splash.classList.add('fade-out');
     setTimeout(function() {
       if (splash.parentNode) splash.remove();
-      var appDiv = document.getElementById('app');
-      if (appDiv) {
-        appDiv.style.display = 'block';
-        appDiv.classList.add('visible');
-      }
-    }, 800);
+    }, 600);
   }
 }, 2500);
 
@@ -487,4 +476,17 @@ createApp({
         netUSD: net
       };
       periodProfit.value += net;
-      periodR
+      periodRounds.value++;
+      savePeriodStats();
+      saveRecords();
+      selectedDateStr.value = null;
+    }
+    function clearRecord() {
+      if (!selectedDateStr.value) return;
+      const oldRec = records.value[selectedDateStr.value];
+      if (oldRec) {
+        periodProfit.value -= oldRec.netUSD;
+        periodRounds.value--;
+        savePeriodStats();
+      }
+      delete
