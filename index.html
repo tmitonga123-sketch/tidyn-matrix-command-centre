@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>TiDyn Matrix – Working Splash</title>
+<title>TiDyn Matrix – Splash Works</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -24,12 +24,8 @@
     justify-content: center;
     align-items: center;
     flex-direction: column;
-    transition: opacity 0.6s ease-out;
+    transition: opacity 0.5s ease-out;
     opacity: 1;
-  }
-  .splash-screen.fade-out {
-    opacity: 0;
-    pointer-events: none;
   }
   .splash-logo {
     text-align: center;
@@ -71,10 +67,9 @@
     letter-spacing: 2px;
   }
   
-  /* Main app */
+  /* Main app container – hidden until splash removed */
   #app {
-    display: block;
-    opacity: 1;
+    display: none;
   }
   
   /* Rest of UI styles */
@@ -97,7 +92,7 @@
     <div class="big">TiDyn</div>
     <div class="small">MULTIVERSE MATRIX</div>
   </div>
-  <div class="splash-sub">quantitative edge system</div>
+  <div class="splash-sub">tap anywhere to start</div>
 </div>
 
 <!-- Main Vue app -->
@@ -204,16 +199,33 @@
 </div>
 
 <script>
-// Guaranteed splash removal after 2.5 seconds
-setTimeout(function() {
+// Function to remove splash and show app
+function removeSplash() {
   var splash = document.getElementById('splashScreen');
   if (splash) {
-    splash.classList.add('fade-out');
+    splash.style.opacity = '0';
     setTimeout(function() {
       if (splash.parentNode) splash.remove();
-    }, 600);
+      var appDiv = document.getElementById('app');
+      if (appDiv) appDiv.style.display = 'block';
+    }, 500);
+  } else {
+    // if splash already gone, just show app
+    var appDiv = document.getElementById('app');
+    if (appDiv) appDiv.style.display = 'block';
   }
-}, 2500);
+}
+
+// Auto-remove after 2 seconds
+setTimeout(removeSplash, 2000);
+
+// Fallback: tap anywhere on splash to remove immediately
+document.addEventListener('click', function() {
+  var splash = document.getElementById('splashScreen');
+  if (splash && splash.style.opacity !== '0') {
+    removeSplash();
+  }
+});
 
 const { createApp, reactive, ref, computed, onMounted, watch, nextTick } = Vue;
 
@@ -472,21 +484,4 @@ createApp({
       if (!selectedDateStr.value) return;
       const net = recordForm.netUSD;
       records.value[selectedDateStr.value] = {
-        noCount: recordForm.noCount,
-        netUSD: net
-      };
-      periodProfit.value += net;
-      periodRounds.value++;
-      savePeriodStats();
-      saveRecords();
-      selectedDateStr.value = null;
-    }
-    function clearRecord() {
-      if (!selectedDateStr.value) return;
-      const oldRec = records.value[selectedDateStr.value];
-      if (oldRec) {
-        periodProfit.value -= oldRec.netUSD;
-        periodRounds.value--;
-        savePeriodStats();
-      }
-      delete
+   
