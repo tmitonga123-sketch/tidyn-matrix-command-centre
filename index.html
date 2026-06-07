@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TiDyn Matrix – Bar Chart (Red/Green)</title>
 <script src="https://cdn.tailwindcss.com"></script>
-<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
   body{background:#0b0c10;color:#e5e7eb;font-family:system-ui}
@@ -18,7 +18,7 @@
   .calendar-day{background:#0f121b;border-radius:12px;padding:8px;text-align:center;cursor:pointer}
   .has-record{background:#2a2a1c;border:1px solid #c5a059;color:#ffd966}
   .stat-card{background:#0a0e16;border-radius:20px;padding:12px;text-align:center}
-  .splash-screen{position:fixed;top:0;left:0;width:100%;height:100%;background:#000;z-index:99999;display:flex;justify-content:center;align-items:center;opacity:1;transition:opacity 1s ease}
+  .splash-screen{position:fixed;top:0;left:0;width:100%;height:100%;background:#000;z-index:99999;display:flex;justify-content:center;align-items:center;opacity:1;transition:opacity 1s ease; pointer-events:none;}
   .splash-screen.hide{opacity:0;pointer-events:none}
   .splash-logo{width:80%;max-width:400px;text-align:center;background:linear-gradient(135deg,#c5a059,#f5d97f);-webkit-background-clip:text;background-clip:text;color:transparent;font-size:3rem;font-weight:bold;font-family:monospace}
   .splash-logo span{display:block;font-size:1rem;color:#cbd5e1;background:none}
@@ -113,7 +113,7 @@
     </div>
   </div>
 
-  <!-- Bar chart (candlestick style) -->
+  <!-- Bar chart -->
   <div v-if="totalRounds > 0" class="card mt-5">
     <div class="font-bold mb-2">📊 Daily Profit / Loss (red = 0-1 No's, green = 2-4 No's)</div>
     <canvas id="profitBarChart" style="max-height: 280px; width:100%"></canvas>
@@ -134,6 +134,15 @@
 </div>
 
 <script>
+// Force splash removal after 3 seconds even if Vue fails
+setTimeout(function() {
+  var splash = document.getElementById('splash');
+  if (splash) {
+    splash.classList.add('hide');
+    setTimeout(function() { if (splash.parentNode) splash.remove(); }, 900);
+  }
+}, 3000);
+
 const { createApp, reactive, ref, computed, onMounted, watch, nextTick } = Vue;
 
 createApp({
@@ -149,7 +158,6 @@ createApp({
     });
     const matrices = ref([]);
     const records = ref({});
-    // Period tracking (since last reinvest)
     const periodProfit = ref(0);
     const periodRounds = ref(0);
     
@@ -162,21 +170,18 @@ createApp({
 
     const fmt = (n) => Number(n).toFixed(2);
     
-    // Total bankroll = base + sum of ALL records (historical)
     const currentBankroll = computed(() => {
       let sum = state.bankroll;
       for (let k in records.value) sum += records.value[k].netUSD;
       return sum;
     });
     
-    // Per matrix stake = 2.78% of BASE bankroll (constant during period)
     const matrixStake = computed(() => {
       const base = state.bankroll;
       if (base <= 0) return 0;
       return base * 0.0278;
     });
 
-    // All-time stats
     const totalRounds = computed(() => Object.keys(records.value).length);
     const totalNetProfit = computed(() => {
       let sum = 0;
@@ -196,22 +201,19 @@ createApp({
     });
     const sortedRecords = computed(() => Object.entries(records.value).sort((a,b)=>new Date(b[0])-new Date(a[0])));
 
-    // ---- reinvest period: add period profit to base bankroll, reset period stats ----
     function reinvestPeriod() {
       if (periodProfit.value === 0) return;
       state.bankroll += periodProfit.value;
       periodProfit.value = 0;
       periodRounds.value = 0;
       savePeriodStats();
-      generate(); // regenerate matrices with new base bankroll
+      generate();
     }
 
-    // ---- manual base bankroll change (e.g., editing input) ----
     function updateBaseBankroll() {
       generate();
     }
 
-    // ---- save period stats to localStorage ----
     function savePeriodStats() {
       localStorage.setItem("TiDynPeriodProfit", periodProfit.value);
       localStorage.setItem("TiDynPeriodRounds", periodRounds.value);
@@ -223,7 +225,6 @@ createApp({
       if (pRounds !== null) periodRounds.value = Number(pRounds);
     }
 
-    // ---- generate matrices ----
     function generatePairs() {
       const pairs = [];
       for (let i = 0; i < state.matches.length; i++) {
@@ -266,7 +267,6 @@ createApp({
       updateExpectedNetMap();
     }
 
-    // ---- expected net for each No count ----
     function computeExpectedNetForNoCount() {
       if (matrices.value.length === 0) return {0:0,1:0,2:0,3:0,4:0};
       const combos = {0:[[]],1:[],2:[],3:[],4:[[0,1,2,3]]};
@@ -319,7 +319,6 @@ createApp({
       if (selectedDateStr.value && !records.value[selectedDateStr.value]) updateNetFromNoCount();
     });
 
-    // ---- records & localStorage ----
     function loadRecords() {
       const stored = localStorage.getItem("TiDynRecords");
       if (stored) records.value = JSON.parse(stored);
@@ -329,7 +328,6 @@ createApp({
       updateBarChart();
     }
 
-    // ---- Bar chart (candlestick style) ----
     function updateBarChart() {
       const canvas = document.getElementById('profitBarChart');
       if (!canvas) return;
@@ -337,12 +335,9 @@ createApp({
       if (dates.length === 0) return;
       const profits = dates.map(d => records.value[d].netUSD);
       const noCounts = dates.map(d => records.value[d].noCount);
-      // Bar colors: red if noCount <= 1, green if 2-4
       const colors = noCounts.map(nc => nc <= 1 ? '#ef4444' : '#22c55e');
       
-      if (barChartInstance) {
-        barChartInstance.destroy();
-      }
+      if (barChartInstance) barChartInstance.destroy();
       const ctx = canvas.getContext('2d');
       barChartInstance = new Chart(ctx, {
         type: 'bar',
@@ -361,24 +356,12 @@ createApp({
           responsive: true,
           maintainAspectRatio: true,
           plugins: {
-            tooltip: {
-              callbacks: {
-                label: (ctx) => `$${ctx.raw.toFixed(2)}`
-              }
-            },
+            tooltip: { callbacks: { label: (ctx) => `$${ctx.raw.toFixed(2)}` } },
             legend: { display: false }
           },
           scales: {
-            y: {
-              title: { display: true, text: 'Profit / Loss (USD)', color: '#9ca3af' },
-              grid: { color: '#1e2229' },
-              ticks: { callback: (val) => `$${val}` }
-            },
-            x: {
-              title: { display: true, text: 'Date', color: '#9ca3af' },
-              grid: { display: false },
-              ticks: { maxRotation: 45, minRotation: 45, autoSkip: true, maxTicksLimit: 8 }
-            }
+            y: { title: { display: true, text: 'Profit / Loss (USD)', color: '#9ca3af' }, grid: { color: '#1e2229' }, ticks: { callback: (val) => `$${val}` } },
+            x: { title: { display: true, text: 'Date', color: '#9ca3af' }, grid: { display: false }, ticks: { maxRotation: 45, minRotation: 45, autoSkip: true, maxTicksLimit: 8 } }
           }
         }
       });
@@ -386,7 +369,6 @@ createApp({
 
     watch(records, () => updateBarChart(), { deep: true });
 
-    // ---- calendar helpers ----
     function getDaysInMonth(y,m) { return new Date(y, m+1, 0).getDate(); }
     function getFirstDayOffset(y,m) { let d = new Date(y,m,1).getDay(); return d === 0 ? 6 : d-1; }
     const calendarDays = computed(() => {
@@ -421,7 +403,6 @@ createApp({
         noCount: recordForm.noCount,
         netUSD: net
       };
-      // Update period stats
       periodProfit.value += net;
       periodRounds.value++;
       savePeriodStats();
@@ -449,10 +430,25 @@ createApp({
       else currentMonth.value++;
     }
 
-    // ---- splash screen ----
     onMounted(() => {
       loadRecords();
       loadPeriodStats();
-      setTimeout(() => {
-        const splash = document.getElementById("splash");
- 
+      generate();
+      nextTick(() => updateBarChart());
+    });
+
+    return {
+      state, matrices, records, selectedDateStr, recordForm,
+      currentYear, currentMonth, monthNames, calendarDays,
+      matrixStake, currentBankroll, totalRounds, totalNetProfit,
+      avgProfit, bestDayProfit, worstDayProfit, sortedRecords,
+      periodProfit, periodRounds,
+      fmt, generate, selectDate, saveRecord, clearRecord,
+      prevMonth, nextMonth, updateNetFromNoCount,
+      reinvestPeriod, updateBaseBankroll
+    };
+  }
+}).mount("#app");
+</script>
+</body>
+                                                                        </html>
