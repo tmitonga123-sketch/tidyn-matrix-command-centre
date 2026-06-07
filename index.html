@@ -3,194 +3,378 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>TiDyn Matrix – Splash Works</title>
+<title>TiDyn Matrix – Advanced Quantitative Terminal</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
-  body { background: #0b0c10; color: #e5e7eb; font-family: system-ui; margin: 0; padding: 0; }
+  body { 
+    background: radial-gradient(circle at 50% 0%, #121620 0%, #07090e 100%); 
+    color: #e2e8f0; 
+    font-family: system-ui, -apple-system, sans-serif; 
+    margin: 0; 
+    padding: 0; 
+  }
   [v-cloak] { display: none; }
   
-  /* Splash screen */
+  /* Advanced Splash Screen */
   .splash-screen {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background: radial-gradient(circle at center, #0f1118, #03050A);
+    background: radial-gradient(circle at center, #0f131f, #04060a);
     z-index: 100000;
     display: flex;
     justify-content: center;
     align-items: center;
     flex-direction: column;
-    transition: opacity 0.5s ease-out;
+    transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1);
     opacity: 1;
   }
   .splash-logo {
     text-align: center;
-    animation: pulseGlow 1.5s ease-in-out infinite;
+    animation: pulseGlow 2s ease-in-out infinite;
   }
   .splash-logo .big {
-    font-size: 3.5rem;
+    font-size: 4rem;
     font-weight: 900;
-    background: linear-gradient(135deg, #c5a059, #f5d97f, #c5a059);
+    background: linear-gradient(135deg, #d4af37, #f9e8a2, #aa7c11);
     background-size: 200% auto;
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
     font-family: monospace;
-    letter-spacing: 2px;
-    animation: shimmer 3s linear infinite;
+    letter-spacing: 4px;
+    animation: shimmer 4s linear infinite;
   }
   .splash-logo .small {
     display: block;
-    font-size: 1rem;
-    color: #cbd5e1;
-    letter-spacing: 4px;
-    margin-top: 8px;
-    font-weight: 300;
+    font-size: 0.9rem;
+    color: #94a3b8;
+    letter-spacing: 6px;
+    margin-top: 12px;
+    font-weight: 400;
+    text-transform: uppercase;
   }
   @keyframes pulseGlow {
-    0% { filter: drop-shadow(0 0 2px #c5a059); transform: scale(1); }
-    50% { filter: drop-shadow(0 0 20px #c5a059); transform: scale(1.02); }
-    100% { filter: drop-shadow(0 0 2px #c5a059); transform: scale(1); }
+    0% { filter: drop-shadow(0 0 5px rgba(212, 175, 55, 0.2)); transform: scale(1); }
+    50% { filter: drop-shadow(0 0 25px rgba(212, 175, 55, 0.6)); transform: scale(1.015); }
+    100% { filter: drop-shadow(0 0 5px rgba(212, 175, 55, 0.2)); transform: scale(1); }
   }
   @keyframes shimmer {
     0% { background-position: 0% 50%; }
     100% { background-position: 200% 50%; }
   }
   .splash-sub {
-    margin-top: 24px;
-    font-size: 0.75rem;
-    color: #6b7280;
-    letter-spacing: 2px;
+    margin-top: 32px;
+    font-size: 0.8rem;
+    color: #475569;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    font-family: monospace;
+  }
+  .skip-btn {
+    margin-top: 32px;
+    background: rgba(212, 175, 55, 0.15);
+    color: #f59e0b;
+    border: 1px solid rgba(212, 175, 55, 0.4);
+    padding: 8px 24px;
+    border-radius: 9999px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+    backdrop-filter: blur(4px);
+  }
+  .skip-btn:hover {
+    background: #d4af37;
+    color: #07090e;
+    box-shadow: 0 0 15px rgba(212, 175, 55, 0.4);
   }
   
-  /* Main app container – hidden until splash removed */
-  #app {
-    display: none;
+  #app { display: none; }
+  
+  /* Premium UI Overhauls */
+  .panel-card {
+    background: rgba(22, 28, 41, 0.65);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(12px);
+    border-radius: 20px;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    transition: border-color 0.3s;
+  }
+  .panel-card:hover {
+    border-color: rgba(212, 175, 55, 0.15);
+  }
+  .btn-gold {
+    background: linear-gradient(135deg, #d4af37, #b89020);
+    color: #07090e;
+    font-weight: 700;
+    padding: 10px 24px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 4px 14px rgba(212, 175, 55, 0.2);
+  }
+  .btn-gold:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(212, 175, 55, 0.4);
+  }
+  .btn-secondary {
+    background: rgba(30, 41, 59, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    color: #cbd5e1;
+    padding: 8px 18px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-secondary:hover {
+    background: rgba(51, 65, 85, 0.9);
+    color: #fff;
+    border-color: rgba(255,255,255,0.1);
+  }
+  input, select {
+    background: rgba(11, 15, 25, 0.8) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 10px;
+    padding: 10px 12px;
+    color: white;
+    transition: all 0.2s;
+  }
+  input:focus, select:focus {
+    outline: none;
+    border-color: #d4af37 !important;
+    box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.1);
   }
   
-  /* Rest of UI styles */
-  .card{background:#111318;border:1px solid #1e2229;border-radius:16px;padding:1rem}
-  .btn-gold{background:#c5a059;color:#0b0c10;font-weight:700;padding:8px 16px;border-radius:40px;cursor:pointer}
-  .btn-secondary{background:#1e293b;color:#cbd5e1;padding:6px 12px;border-radius:30px;cursor:pointer}
-  input,select{background:#0b0c10;border:1px solid #2a3342;border-radius:12px;padding:8px;color:white}
-  .calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
-  .calendar-day{background:#0f121b;border-radius:12px;padding:8px;text-align:center;cursor:pointer}
-  .has-record{background:#2a2a1c;border:1px solid #c5a059;color:#ffd966}
-  .stat-card{background:#0a0e16;border-radius:20px;padding:12px;text-align:center}
-  .tooltip{font-size:0.7rem;color:#9ca3af;margin-top:4px}
+  /* Refined Dynamic Grid systems */
+  .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+  .calendar-day {
+    background: rgba(15, 21, 32, 0.5);
+    border: 1px solid rgba(255,255,255,0.02);
+    border-radius: 10px;
+    aspect-ratio: 1.2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.95rem;
+  }
+  .calendar-day:hover:not(.empty-day) {
+    background: rgba(30, 41, 59, 0.8);
+    transform: scale(1.05);
+  }
+  .has-record {
+    background: rgba(212, 175, 55, 0.08);
+    border: 1px solid #d4af37;
+    color: #f59e0b;
+    font-weight: bold;
+    box-shadow: inset 0 0 8px rgba(212, 175, 55, 0.1);
+  }
+  .stat-card {
+    background: linear-gradient(145deg, rgba(17, 24, 39, 0.8), rgba(11, 15, 25, 0.9));
+    border: 1px solid rgba(255, 255, 255, 0.03);
+    border-radius: 16px;
+    padding: 16px;
+    text-align: center;
+  }
+  .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+  .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+  .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
 </style>
 </head>
 <body>
 
-<!-- Splash screen -->
+<!-- Splash screen with skip button -->
 <div id="splashScreen" class="splash-screen">
   <div class="splash-logo">
     <div class="big">TiDyn</div>
-    <div class="small">MULTIVERSE MATRIX</div>
+    <div class="small">Multiverse Matrix</div>
   </div>
-  <div class="splash-sub">tap anywhere to start</div>
+  <div class="splash-sub">Initializing matrix quantitative layout...</div>
+  <button id="skipSplashBtn" class="skip-btn">⏎ Access System</button>
 </div>
 
 <!-- Main Vue app -->
-<div id="app">
-<div class="max-w-7xl mx-auto px-4 py-4">
+<div id="app" v-cloak>
+<div class="max-w-7xl mx-auto px-6 py-6">
 
-  <div class="flex justify-between items-center border-b border-gray-800 pb-3 mb-5">
-    <div class="text-2xl font-bold text-amber-400">TiDyn MATRIX v2.5</div>
-    <div class="text-right">
-      <div>Base bankroll: <span class="text-amber-400 font-bold">${{ fmt(state.bankroll) }}</span></div>
-      <div class="text-sm text-gray-400">Total bankroll (including all profits): ${{ fmt(currentBankroll) }}</div>
+  <!-- Header Banner Section -->
+  <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-800/60 pb-5 mb-6 gap-4">
+    <div>
+      <div class="text-3xl font-extrabold tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-yellow-200 font-mono">TiDyn MATRIX v2.5</div>
+      <p class="text-xs text-slate-500 uppercase tracking-widest mt-1">Cross-Hedge Probability Optimization Module</p>
+    </div>
+    <div class="bg-slate-900/60 border border-slate-800/80 px-4 py-2 rounded-xl text-right">
+      <div class="text-xs text-slate-400 uppercase tracking-wider">Base bankroll: <span class="text-amber-400 font-bold font-mono ml-1">${{ fmt(state.bankroll) }}</span></div>
+      <div class="text-sm font-semibold mt-0.5">Total System Equity: <span class="text-emerald-400 font-mono">${{ fmt(currentBankroll) }}</span></div>
     </div>
   </div>
 
-  <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-    <div class="stat-card"><div class="text-xs">Period rounds (since last reinvest)</div><div class="text-xl">{{ periodRounds }}</div></div>
-    <div class="stat-card"><div class="text-xs">Period profit</div><div class="text-xl" :class="periodProfit>=0?'text-green-400':'text-red-400'">${{ fmt(periodProfit) }}</div></div>
-    <div class="stat-card"><div class="text-xs">Avg / round (all time)</div><div class="text-xl" :class="avgProfit>=0?'text-green-400':'text-red-400'">${{ fmt(avgProfit) }}</div></div>
-    <div class="stat-card"><div class="text-xs">Best / worst day</div><div class="text-md">${{ fmt(bestDayProfit) }} / ${{ fmt(worstDayProfit) }}</div></div>
-  </div>
-
-  <div class="card mb-5 flex flex-wrap gap-4 items-end">
-    <div><div class="text-xs text-gray-400">Base bankroll (USD)</div><input type="number" v-model.number="state.bankroll" step="100" style="width:160px" @change="updateBaseBankroll"/></div>
-    <div><div class="text-xs text-gray-400">Per matrix stake (2.78% of base)</div><div class="font-mono">${{ fmt(matrixStake) }}</div></div>
-    <button class="btn-gold" @click="generate">⟳ Generate 6 Matrices</button>
-    <button class="btn-secondary" @click="reinvestPeriod">💰 Reinvest Period</button>
-  </div>
-  <div class="tooltip mb-3">* Stake stays constant during the period. "Reinvest Period" adds period profit to base bankroll and resets period stats (records stay forever).</div>
-
-  <div class="card mb-5">
-    <div class="text-sm font-semibold mb-2">Match odds (BTTS Yes live / No pre‑match)</div>
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-      <div v-for="(m,idx) in state.matches" :key="idx" class="border border-gray-800 rounded-xl p-2">
-        <div class="font-bold text-amber-400">{{ m.name }}</div>
-        <div class="text-xs">Yes (live) <input type="number" step="0.01" v-model.number="m.yesOdds" class="mt-1" @change="generate"/></div>
-        <div class="text-xs mt-1">No (pre) <input type="number" step="0.01" v-model.number="m.noOdds" class="mt-1" @change="generate"/></div>
+  <!-- Performance Metric Blocks -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div class="stat-card">
+      <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Rounds This Period</div>
+      <div class="text-2xl font-bold font-mono text-slate-100">{{ periodRounds }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Period Return Profile</div>
+      <div class="text-2xl font-bold font-mono" :class="periodProfit>=0?'text-emerald-400':'text-rose-400'">${{ fmt(periodProfit) }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">All-Time Round Average</div>
+      <div class="text-2xl font-bold font-mono" :class="avgProfit>=0?'text-emerald-400':'text-rose-400'">${{ fmt(avgProfit) }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Peak Amplitude Variance</div>
+      <div class="text-sm font-bold font-mono text-slate-200 mt-2">
+        <span class="text-emerald-400">${{ fmt(bestDayProfit) }}</span> <span class="text-slate-600">/</span> <span class="text-rose-400">${{ fmt(worstDayProfit) }}</span>
       </div>
     </div>
   </div>
 
+  <!-- Parameter Modification Suite -->
+  <div class="panel-card p-5 mb-6 flex flex-wrap gap-6 items-end justify-between">
+    <div class="flex flex-wrap gap-6 items-end">
+      <div class="flex flex-col">
+        <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Base Allocations (USD)</label>
+        <input type="number" v-model.number="state.bankroll" step="100" style="width:180px" @change="updateBaseBankroll"/>
+      </div>
+      <div class="flex flex-col bg-slate-950/40 border border-slate-800/80 px-4 py-2.5 rounded-xl">
+        <span class="text-xs text-slate-500 uppercase tracking-wider">Per Matrix Risk Target (2.78%)</span>
+        <span class="font-mono text-amber-400 font-bold text-lg mt-0.5">${{ fmt(matrixStake) }}</span>
+      </div>
+    </div>
+    <div class="flex gap-3 w-full sm:w-auto justify-end">
+      <button class="btn-secondary whitespace-nowrap" @click="reinvestPeriod">💰 Reinvest Period</button>
+      <button class="btn-gold whitespace-nowrap" @click="generate">⟳ Optimize Matrices</button>
+    </div>
+  </div>
+  <p class="text-[11px] text-slate-500 italic mt-2 mb-6 px-1">* Stake allocation locks during matching window cycles. "Reinvest Period" rolls profit segments directly down into base asset fields and flushes cyclical variables.</p>
+
+  <!-- Live Odd Feed Matrices -->
+  <div class="panel-card p-5 mb-6">
+    <div class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+      <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span> Input Streams (BTTS Yes Live / No Pre-Match)
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div v-for="(m,idx) in state.matches" :key="idx" class="bg-slate-900/40 border border-slate-800/80 rounded-xl p-3 flex flex-col justify-between">
+        <div class="font-bold text-slate-200 border-b border-slate-800/60 pb-1.5 mb-2 flex justify-between items-center">
+          <span>Asset Class {{ m.name }}</span>
+          <span class="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded">Active</span>
+        </div>
+        <div class="space-y-2">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-xs text-slate-400">Yes (Live):</span>
+            <input type="number" step="0.01" v-model.number="m.yesOdds" class="w-24 text-right text-sm" @change="generate"/>
+          </div>
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-xs text-slate-400">No (Pre):</span>
+            <input type="number" step="0.01" v-model.number="m.noOdds" class="w-24 text-right text-sm" @change="generate"/>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Solved Equation Quadrants -->
   <div v-if="matrices.length" class="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-    <div v-for="(m,idx) in matrices" :key="idx" class="card border-l-4 border-l-amber-600">
-      <div class="flex justify-between"><b>{{ m.pair[0].name }} – {{ m.pair[1].name }}</b><span class="text-xs">No/No parlay: {{ m.parlayOdds.toFixed(2) }}x</span></div>
-      <hr class="my-2"/>
-      <div class="grid grid-cols-2 gap-1 text-sm">
-        <div class="flex justify-between"><span>✅ YES {{ m.pair[0].name }}</span><span>${{ fmt(m.stakes.yes1) }}</span></div>
-        <div class="flex justify-between"><span>✅ YES {{ m.pair[1].name }}</span><span>${{ fmt(m.stakes.yes2) }}</span></div>
-        <div class="flex justify-between"><span>❌ NO {{ m.pair[0].name }}</span><span>${{ fmt(m.stakes.no1) }}</span></div>
-        <div class="flex justify-between"><span>❌ NO {{ m.pair[1].name }}</span><span>${{ fmt(m.stakes.no2) }}</span></div>
-        <div class="col-span-2 flex justify-between mt-1 pt-1 border-t border-gray-700"><span>🎲 PARLAY NO/NO</span><span class="text-amber-300">${{ fmt(m.stakes.parlay) }}</span></div>
+    <div v-for="(m,idx) in matrices" :key="idx" class="panel-card p-4 border-t-2 border-t-amber-500/60 flex flex-col justify-between">
+      <div>
+        <div class="flex justify-between items-start mb-2">
+          <b class="text-slate-200 tracking-wide text-sm font-mono">{{ m.pair[0].name }} ⊗ {{ m.pair[1].name }}</b>
+          <span class="text-[10px] font-mono text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">Parlay: {{ m.parlayOdds.toFixed(2) }}x</span>
+        </div>
+        <div class="space-y-1.5 text-xs font-mono mt-3">
+          <div class="flex justify-between items-center p-1.5 rounded bg-slate-950/20">
+            <span class="text-emerald-400 text-[11px]">✅ YES {{ m.pair[0].name }}</span>
+            <span class="text-slate-300 font-bold">${{ fmt(m.stakes.yes1) }}</span>
+          </div>
+          <div class="flex justify-between items-center p-1.5 rounded bg-slate-950/20">
+            <span class="text-emerald-400 text-[11px]">✅ YES {{ m.pair[1].name }}</span>
+            <span class="text-slate-300 font-bold">${{ fmt(m.stakes.yes2) }}</span>
+          </div>
+          <div class="flex justify-between items-center p-1.5 rounded bg-slate-950/20">
+            <span class="text-rose-400 text-[11px]">❌ NO {{ m.pair[0].name }}</span>
+            <span class="text-slate-300 font-bold">${{ fmt(m.stakes.no1) }}</span>
+          </div>
+          <div class="flex justify-between items-center p-1.5 rounded bg-slate-950/20">
+            <span class="text-rose-400 text-[11px]">❌ NO {{ m.pair[1].name }}</span>
+            <span class="text-slate-300 font-bold">${{ fmt(m.stakes.no2) }}</span>
+          </div>
+        </div>
+      </div>
+      <div class="mt-4 pt-2.5 border-t border-slate-800/80 flex justify-between items-center bg-amber-500/[0.02] p-1.5 rounded">
+        <span class="text-xs text-slate-400 font-semibold font-mono">🎲 PARLAY OPTION (NO/NO)</span>
+        <span class="text-amber-400 font-mono font-bold text-sm">${{ fmt(m.stakes.parlay) }}</span>
       </div>
     </div>
   </div>
 
-  <div v-if="matrices.length" class="card">
-    <div class="flex flex-wrap justify-between items-center mb-3">
-      <b>📅 Round Tracker (all time)</b>
-      <div class="flex gap-2">
-        <button class="btn-secondary" @click="prevMonth">◀</button>
-        <span class="px-3 py-1 bg-gray-800 rounded-full">{{ monthNames[currentMonth] }} {{ currentYear }}</span>
-        <button class="btn-secondary" @click="nextMonth">▶</button>
+  <!-- Dynamic Calendar Ledger -->
+  <div v-if="matrices.length" class="panel-card p-5 mb-6">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+      <b class="text-xs uppercase tracking-widest text-slate-400 flex items-center gap-2">
+        📅 Time-Series Round Ledger
+      </b>
+      <div class="flex items-center gap-2 w-full sm:w-auto justify-between">
+        <button class="btn-secondary py-1 px-3 text-sm" @click="prevMonth">◀</button>
+        <span class="px-4 py-1 bg-slate-950/60 border border-slate-800 rounded-lg text-sm font-mono text-amber-400 min-w-[140px] text-center">{{ monthNames[currentMonth] }} {{ currentYear }}</span>
+        <button class="btn-secondary py-1 px-3 text-sm" @click="nextMonth">▶</button>
       </div>
     </div>
+    
     <div class="calendar-grid">
-      <div v-for="d in ['M','T','W','T','F','S','S']" :key="d" class="text-center text-xs text-gray-500">{{ d }}</div>
-      <div v-for="day in calendarDays" :key="day.dateStr || day.id" class="calendar-day" :class="{'has-record': day.hasRecord}" @click="selectDate(day.dateStr)">
-        <span v-if="day.dayNum">{{ day.dayNum }}</span><span v-else> </span>
+      <div v-for="d in ['MON','TUE','WED','THU','FRI','SAT','SUN']" :key="d" class="text-center text-[10px] font-bold text-slate-500 uppercase tracking-wider py-1">{{ d }}</div>
+      <div v-for="day in calendarDays" :key="day.dateStr || day.id" class="calendar-day" :class="{'has-record': day.hasRecord, 'empty-day opacity-0 pointer-events-none': !day.dayNum}" @click="selectDate(day.dateStr)">
+        <span v-if="day.dayNum">{{ day.dayNum }}</span>
       </div>
     </div>
-    <div v-if="selectedDateStr" class="mt-4 p-3 bg-black/30 rounded-xl">
-      <div class="font-bold text-amber-300">{{ selectedDateStr }}</div>
-      <div class="flex flex-wrap gap-4 items-end mt-2">
-        <div><div class="text-xs">BTTS No count (0-4)</div>
-          <input type="number" v-model.number="recordForm.noCount" min="0" max="4" style="width:90px" @change="updateNetFromNoCount"/>
+
+    <!-- Panel for Selected Date Adjustments -->
+    <div v-if="selectedDateStr" class="mt-5 p-4 bg-slate-950/60 border border-slate-800/80 rounded-xl animate-fadeIn">
+      <div class="font-mono text-sm text-amber-400 border-b border-slate-800/60 pb-2 mb-3 font-bold">Modifying Node Index: {{ selectedDateStr }}</div>
+      <div class="flex flex-col md:flex-row gap-4 items-end justify-between">
+        <div class="flex flex-wrap gap-4 items-center">
+          <div class="flex flex-col">
+            <label class="text-xs text-slate-400 mb-1">State Failure Count (0-4)</label>
+            <input type="number" v-model.number="recordForm.noCount" min="0" max="4" style="width:110px" @change="updateNetFromNoCount"/>
+          </div>
+          <div class="flex flex-col">
+            <label class="text-xs text-slate-400 mb-1">Calculated Delta USD</label>
+            <input type="number" v-model.number="recordForm.netUSD" style="width:140px"/>
+          </div>
         </div>
-        <div><div class="text-xs">Net P/L (USD)</div>
-          <input type="number" v-model.number="recordForm.netUSD" style="width:120px"/>
+        <div class="flex gap-2 w-full md:w-auto justify-end">
+          <button class="btn-secondary py-2 px-5 text-sm" @click="clearRecord">Delete Node</button>
+          <button class="btn-gold py-2 px-6 text-sm" @click="saveRecord">Commit Node</button>
         </div>
-        <button class="btn-gold py-1 px-4" @click="saveRecord">Save</button>
-        <button class="btn-secondary py-1 px-4" @click="clearRecord">Delete</button>
       </div>
-      <div class="text-xs text-gray-400 mt-2">* Auto‑calculated from No count based on current matrix stakes</div>
     </div>
   </div>
 
-  <!-- Bar chart -->
-  <div v-if="totalRounds > 0" class="card mt-5">
-    <div class="font-bold mb-2">📊 Daily Profit / Loss (red = 0-1 No's, green = 2-4 No's)</div>
-    <canvas id="profitBarChart" style="max-height: 280px; width:100%"></canvas>
-  </div>
+  <!-- Performance Charts & Audit trails -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div v-if="totalRounds > 0" class="panel-card p-4 lg:col-span-2">
+      <div class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">📊 Delta Return Variance Matrix</div>
+      <canvas id="profitBarChart" style="max-height: 260px; width:100%"></canvas>
+    </div>
 
-  <div v-if="Object.keys(records).length" class="card mt-5">
-    <div class="font-bold mb-2">📋 Complete round history (audit trail)</div>
-    <div class="max-h-52 overflow-auto">
-      <div v-for="([date, rec]) in sortedRecords" :key="date" class="flex justify-between border-b border-gray-800 py-2">
-        <span class="font-mono text-sm">{{ date }}</span>
-        <span>{{ rec.noCount }} No’s → </span>
-        <span :class="rec.netUSD>=0?'text-green-400':'text-red-400'">${{ fmt(rec.netUSD) }}</span>
+    <div v-if="Object.keys(records).length" class="panel-card p-4" :class="{'lg:col-span-3': totalRounds === 0}">
+      <div class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">📋 Automated Pipeline Audit Logs</div>
+      <div class="max-h-[260px] overflow-y-auto custom-scrollbar pr-1 space-y-1">
+        <div v-for="([date, rec]) in sortedRecords" :key="date" class="flex justify-between items-center border-b border-slate-800/40 py-2 text-xs font-mono">
+          <span class="text-slate-400">{{ date }}</span>
+          <div class="flex gap-4 items-center">
+            <span class="text-slate-500">[{{ rec.noCount }} Negations]</span>
+            <span :class="rec.netUSD>=0?'text-emerald-400':'text-rose-400'" class="font-bold">${{ fmt(rec.netUSD) }}</span>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -199,7 +383,6 @@
 </div>
 
 <script>
-// Function to remove splash and show app
 function removeSplash() {
   var splash = document.getElementById('splashScreen');
   if (splash) {
@@ -208,21 +391,23 @@ function removeSplash() {
       if (splash.parentNode) splash.remove();
       var appDiv = document.getElementById('app');
       if (appDiv) appDiv.style.display = 'block';
-    }, 500);
+    }, 600);
   } else {
-    // if splash already gone, just show app
     var appDiv = document.getElementById('app');
     if (appDiv) appDiv.style.display = 'block';
   }
 }
 
-// Auto-remove after 2 seconds
 setTimeout(removeSplash, 2000);
 
-// Fallback: tap anywhere on splash to remove immediately
-document.addEventListener('click', function() {
+var skipBtn = document.getElementById('skipSplashBtn');
+if (skipBtn) {
+  skipBtn.addEventListener('click', removeSplash);
+}
+
+document.body.addEventListener('click', function(e) {
   var splash = document.getElementById('splashScreen');
-  if (splash && splash.style.opacity !== '0') {
+  if (splash && splash.style.opacity !== '0' && e.target.id !== 'skipSplashBtn') {
     removeSplash();
   }
 });
@@ -288,200 +473,4 @@ createApp({
     function reinvestPeriod() {
       if (periodProfit.value === 0) return;
       state.bankroll += periodProfit.value;
-      periodProfit.value = 0;
-      periodRounds.value = 0;
-      savePeriodStats();
-      generate();
-    }
-
-    function updateBaseBankroll() {
-      generate();
-    }
-
-    function savePeriodStats() {
-      localStorage.setItem("TiDynPeriodProfit", periodProfit.value);
-      localStorage.setItem("TiDynPeriodRounds", periodRounds.value);
-    }
-    function loadPeriodStats() {
-      const pProfit = localStorage.getItem("TiDynPeriodProfit");
-      const pRounds = localStorage.getItem("TiDynPeriodRounds");
-      if (pProfit !== null) periodProfit.value = Number(pProfit);
-      if (pRounds !== null) periodRounds.value = Number(pRounds);
-    }
-
-    function generatePairs() {
-      const pairs = [];
-      for (let i = 0; i < state.matches.length; i++) {
-        for (let j = i+1; j < state.matches.length; j++) {
-          pairs.push([state.matches[i], state.matches[j]]);
-        }
-      }
-      return pairs;
-    }
-
-    function solveMatrix(mA, mB, S) {
-      if (S <= 0) return { yes1:0, yes2:0, no1:0, no2:0, parlay:0, total:0 };
-      const Y1 = mA.yesOdds - 1;
-      const Y2 = mB.yesOdds - 1;
-      const L = 0.3 * S;
-      const denom = mA.yesOdds + mB.yesOdds;
-      let a = (0.7 * S) / denom;
-      let b = a;
-      let c = a * (mA.yesOdds / mA.noOdds);
-      let d = b * (mB.yesOdds / mB.noOdds);
-      let e = a*Y1 + b*Y2 + L - c - d;
-      if (isNaN(e) || e < 0) e = 0;
-      return { yes1: a, yes2: b, no1: c, no2: d, parlay: e, total: a+b+c+d+e };
-    }
-
-    function generate() {
-      const S = matrixStake.value;
-      if (S <= 0) {
-        matrices.value = [];
-        return;
-      }
-      const pairs = generatePairs();
-      const newMatrices = [];
-      for (let [mA, mB] of pairs) {
-        const stakes = solveMatrix(mA, mB, S);
-        const parlayOdds = mA.noOdds * mB.noOdds;
-        newMatrices.push({ pair: [mA, mB], parlayOdds, stakes });
-      }
-      matrices.value = newMatrices;
-      updateExpectedNetMap();
-    }
-
-    function computeExpectedNetForNoCount() {
-      if (matrices.value.length === 0) return {0:0,1:0,2:0,3:0,4:0};
-      const combos = {0:[[]],1:[],2:[],3:[],4:[[0,1,2,3]]};
-      for (let k=1; k<=3; k++) {
-        const res = [];
-        const backtrack = (start, curr) => {
-          if (curr.length === k) { res.push([...curr]); return; }
-          for (let i=start; i<4; i++) { curr.push(i); backtrack(i+1, curr); curr.pop(); }
-        };
-        backtrack(0, []);
-        combos[k] = res;
-      }
-      const results = {0:[],1:[],2:[],3:[],4:[]};
-      for (let k=0; k<=4; k++) {
-        for (let combo of combos[k]) {
-          const noSet = new Set(combo);
-          let totalNet = 0;
-          for (let m of matrices.value) {
-            const aIdx = state.matches.findIndex(mm => mm.name === m.pair[0].name);
-            const bIdx = state.matches.findIndex(mm => mm.name === m.pair[1].name);
-            const aIsNo = noSet.has(aIdx);
-            const bIsNo = noSet.has(bIdx);
-            const st = m.stakes;
-            const Y1 = m.pair[0].yesOdds, N1 = m.pair[0].noOdds;
-            const Y2 = m.pair[1].yesOdds, N2 = m.pair[1].noOdds;
-            let net = 0;
-            if (!aIsNo && !bIsNo) net = st.yes1*(Y1-1) + st.yes2*(Y2-1) - (st.no1+st.no2+st.parlay);
-            else if (!aIsNo && bIsNo) net = st.yes1*(Y1-1) + st.no2*(N2-1) - (st.yes2+st.no1+st.parlay);
-            else if (aIsNo && !bIsNo) net = st.no1*(N1-1) + st.yes2*(Y2-1) - (st.yes1+st.no2+st.parlay);
-            else net = st.no1*(N1-1) + st.no2*(N2-1) + st.parlay*(N1*N2-1) - (st.yes1+st.yes2);
-            totalNet += net;
-          }
-          results[k].push(totalNet);
-        }
-      }
-      const avg = {};
-      for (let k=0;k<=4;k++) avg[k] = results[k].reduce((a,b)=>a+b,0) / (results[k].length||1);
-      return avg;
-    }
-
-    const expectedNetMap = ref({0:0,1:0,2:0,3:0,4:0});
-    function updateExpectedNetMap() { expectedNetMap.value = computeExpectedNetForNoCount(); }
-    function updateNetFromNoCount() {
-      const val = expectedNetMap.value[recordForm.noCount];
-      if (val !== undefined) recordForm.netUSD = Math.round(val * 100) / 100;
-    }
-
-    watch(matrices, () => {
-      updateExpectedNetMap();
-      if (selectedDateStr.value && !records.value[selectedDateStr.value]) updateNetFromNoCount();
-    });
-
-    function loadRecords() {
-      const stored = localStorage.getItem("TiDynRecords");
-      if (stored) records.value = JSON.parse(stored);
-    }
-    function saveRecords() {
-      localStorage.setItem("TiDynRecords", JSON.stringify(records.value));
-      updateBarChart();
-    }
-
-    function updateBarChart() {
-      const canvas = document.getElementById('profitBarChart');
-      if (!canvas) return;
-      const dates = Object.keys(records.value).sort();
-      if (dates.length === 0) return;
-      const profits = dates.map(d => records.value[d].netUSD);
-      const noCounts = dates.map(d => records.value[d].noCount);
-      const colors = noCounts.map(nc => nc <= 1 ? '#ef4444' : '#22c55e');
-      
-      if (barChartInstance) barChartInstance.destroy();
-      const ctx = canvas.getContext('2d');
-      barChartInstance = new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: dates,
-          datasets: [{
-            label: 'Net P/L ($)',
-            data: profits,
-            backgroundColor: colors,
-            borderColor: colors,
-            borderWidth: 1,
-            borderRadius: 4,
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: true,
-          plugins: {
-            tooltip: { callbacks: { label: (ctx) => `$${ctx.raw.toFixed(2)}` } },
-            legend: { display: false }
-          },
-          scales: {
-            y: { title: { display: true, text: 'Profit / Loss (USD)', color: '#9ca3af' }, grid: { color: '#1e2229' }, ticks: { callback: (val) => `$${val}` } },
-            x: { title: { display: true, text: 'Date', color: '#9ca3af' }, grid: { display: false }, ticks: { maxRotation: 45, minRotation: 45, autoSkip: true, maxTicksLimit: 8 } }
-          }
-        }
-      });
-    }
-
-    watch(records, () => updateBarChart(), { deep: true });
-
-    function getDaysInMonth(y,m) { return new Date(y, m+1, 0).getDate(); }
-    function getFirstDayOffset(y,m) { let d = new Date(y,m,1).getDay(); return d === 0 ? 6 : d-1; }
-    const calendarDays = computed(() => {
-      const y = currentYear.value, m = currentMonth.value;
-      const daysInMonth = getDaysInMonth(y,m);
-      const offset = getFirstDayOffset(y,m);
-      let days = [];
-      for (let i=0; i<offset; i++) days.push({ dayNum: null, dateStr: null, hasRecord: false, id: `e-${i}` });
-      for (let d=1; d<=daysInMonth; d++) {
-        const dateStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-        days.push({ dayNum: d, dateStr, hasRecord: !!records.value[dateStr], id: dateStr });
-      }
-      return days;
-    });
-
-    function selectDate(dateStr) {
-      if (!dateStr) return;
-      selectedDateStr.value = dateStr;
-      const rec = records.value[dateStr];
-      if (rec) {
-        recordForm.noCount = rec.noCount;
-        recordForm.netUSD = rec.netUSD;
-      } else {
-        recordForm.noCount = 2;
-        updateNetFromNoCount();
-      }
-    }
-    function saveRecord() {
-      if (!selectedDateStr.value) return;
-      const net = recordForm.netUSD;
-      records.value[selectedDateStr.value] = {
-   
+ 
