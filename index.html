@@ -15,7 +15,7 @@
     margin: 0; 
     padding: 0; 
   }
-  [v-cloak] { display: none; }
+  [v-cloak] { display: none !important; }
   
   /* Advanced Splash Screen */
   .splash-screen {
@@ -30,7 +30,7 @@
     justify-content: center;
     align-items: center;
     flex-direction: column;
-    transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     opacity: 1;
   }
   .splash-logo {
@@ -190,21 +190,18 @@
 </head>
 <body>
 
-<!-- Splash screen with skip button -->
 <div id="splashScreen" class="splash-screen">
   <div class="splash-logo">
     <div class="big">TiDyn</div>
     <div class="small">Multiverse Matrix</div>
   </div>
   <div class="splash-sub">Initializing matrix quantitative layout...</div>
-  <button id="skipSplashBtn" class="skip-btn">⏎ Access System</button>
+  <button id="skipSplashBtn" class="skip-btn">Access System</button>
 </div>
 
-<!-- Main Vue app -->
-<div id="app" v-cloak>
+<div id="app">
 <div class="max-w-7xl mx-auto px-6 py-6">
 
-  <!-- Header Banner Section -->
   <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-800/60 pb-5 mb-6 gap-4">
     <div>
       <div class="text-3xl font-extrabold tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-yellow-200 font-mono">TiDyn MATRIX v2.5</div>
@@ -216,7 +213,6 @@
     </div>
   </div>
 
-  <!-- Performance Metric Blocks -->
   <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
     <div class="stat-card">
       <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Rounds This Period</div>
@@ -238,7 +234,6 @@
     </div>
   </div>
 
-  <!-- Parameter Modification Suite -->
   <div class="panel-card p-5 mb-6 flex flex-wrap gap-6 items-end justify-between">
     <div class="flex flex-wrap gap-6 items-end">
       <div class="flex flex-col">
@@ -257,7 +252,6 @@
   </div>
   <p class="text-[11px] text-slate-500 italic mt-2 mb-6 px-1">* Stake allocation locks during matching window cycles. "Reinvest Period" rolls profit segments directly down into base asset fields and flushes cyclical variables.</p>
 
-  <!-- Live Odd Feed Matrices -->
   <div class="panel-card p-5 mb-6">
     <div class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
       <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span> Input Streams (BTTS Yes Live / No Pre-Match)
@@ -282,7 +276,6 @@
     </div>
   </div>
 
-  <!-- Solved Equation Quadrants -->
   <div v-if="matrices.length" class="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
     <div v-for="(m,idx) in matrices" :key="idx" class="panel-card p-4 border-t-2 border-t-amber-500/60 flex flex-col justify-between">
       <div>
@@ -316,7 +309,6 @@
     </div>
   </div>
 
-  <!-- Dynamic Calendar Ledger -->
   <div v-if="matrices.length" class="panel-card p-5 mb-6">
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
       <b class="text-xs uppercase tracking-widest text-slate-400 flex items-center gap-2">
@@ -336,7 +328,6 @@
       </div>
     </div>
 
-    <!-- Panel for Selected Date Adjustments -->
     <div v-if="selectedDateStr" class="mt-5 p-4 bg-slate-950/60 border border-slate-800/80 rounded-xl animate-fadeIn">
       <div class="font-mono text-sm text-amber-400 border-b border-slate-800/60 pb-2 mb-3 font-bold">Modifying Node Index: {{ selectedDateStr }}</div>
       <div class="flex flex-col md:flex-row gap-4 items-end justify-between">
@@ -358,7 +349,6 @@
     </div>
   </div>
 
-  <!-- Performance Charts & Audit trails -->
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <div v-if="totalRounds > 0" class="panel-card p-4 lg:col-span-2">
       <div class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">📊 Delta Return Variance Matrix</div>
@@ -383,26 +373,30 @@
 </div>
 
 <script>
+// Pure Vanilla JavaScript splash screen state removal loop
 function removeSplash() {
   var splash = document.getElementById('splashScreen');
+  var appDiv = document.getElementById('app');
   if (splash) {
     splash.style.opacity = '0';
     setTimeout(function() {
       if (splash.parentNode) splash.remove();
-      var appDiv = document.getElementById('app');
       if (appDiv) appDiv.style.display = 'block';
-    }, 600);
+    }, 450);
   } else {
-    var appDiv = document.getElementById('app');
     if (appDiv) appDiv.style.display = 'block';
   }
 }
 
-setTimeout(removeSplash, 2000);
+// Timeout auto-release fallback trigger
+setTimeout(removeSplash, 2500);
 
 var skipBtn = document.getElementById('skipSplashBtn');
 if (skipBtn) {
-  skipBtn.addEventListener('click', removeSplash);
+  skipBtn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    removeSplash();
+  });
 }
 
 document.body.addEventListener('click', function(e) {
@@ -473,4 +467,16 @@ createApp({
     function reinvestPeriod() {
       if (periodProfit.value === 0) return;
       state.bankroll += periodProfit.value;
+      periodProfit.value = 0;
+      periodRounds.value = 0;
+      savePeriodStats();
+      generate();
+    }
+
+    function updateBaseBankroll() {
+      generate();
+    }
+
+    function savePeriodStats() {
+      localStorage.setItem("TiDynPeriodProfit", periodProfit.value);
  
