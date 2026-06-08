@@ -21,74 +21,287 @@
             --blue: #4da6ff;
         }
         * { margin:0; padding:0; box-sizing:border-box; }
-        body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh; overflow-x: hidden; }
-        body::after { content:''; position:fixed; inset:0; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E"); pointer-events:none; z-index:9999; opacity:0.4; }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'DM Sans', sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        body::after {
+            content:'';
+            position:fixed; inset:0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+            pointer-events:none; z-index:9999; opacity:0.4;
+        }
         .app { max-width: 1100px; margin: 0 auto; padding: 24px 20px 80px; position: relative; z-index: 1; }
+
+        /* Views */
         .view { display: none; animation: fadeUp 0.4s ease both; }
         .view.active { display: block; }
+
+        /* Header */
         .header { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 24px; }
         .header-left .eyebrow { font-family: 'Space Mono', monospace; font-size: 10px; letter-spacing: 4px; color: var(--gold); margin-bottom: 6px; }
-        .header-left h1 { font-family: 'Bebas Neue', sans-serif; font-size: clamp(36px, 6vw, 64px); letter-spacing: 3px; line-height: 1; background: linear-gradient(135deg, var(--gold2) 0%, var(--gold) 60%, #8c6b1f 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .header-left h1 {
+            font-family: 'Bebas Neue', sans-serif; font-size: clamp(36px, 6vw, 64px); letter-spacing: 3px; line-height: 1;
+            background: linear-gradient(135deg, var(--gold2) 0%, var(--gold) 60%, #8c6b1f 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+        .version-badge { font-family: 'Space Mono', monospace; font-size: 9px; letter-spacing: 2px; background: rgba(212,175,55,0.08); border: 1px solid var(--border); color: var(--gold); padding: 6px 12px; border-radius: 2px; }
+
+        /* Navigation */
         .nav { display: flex; gap: 2px; margin-bottom: 20px; border-bottom: 1px solid var(--border); }
-        .tab-btn { font-family: 'Space Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; padding: 10px 16px; background: none; border: none; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; }
-        .tab-btn.active { color: var(--gold); border-bottom-color: var(--gold); }
-        .card { background: var(--surface); border: 1px solid var(--border); border-radius: 4px; padding: 24px; margin-bottom: 16px; }
+        .nav-btn, .tab-btn {
+            font-family: 'Space Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+            padding: 10px 16px; background: none; border: none; color: var(--muted); cursor: pointer;
+            border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all 0.2s;
+        }
+        .nav-btn:hover, .tab-btn:hover { color: var(--text); }
+        .nav-btn.active, .tab-btn.active { color: var(--gold); border-bottom-color: var(--gold); }
+
+        /* Cards */
+        .card { background: var(--surface); border: 1px solid var(--border); border-radius: 4px; padding: 24px; position: relative; overflow: hidden; margin-bottom: 16px; }
+        .card::before { content:''; position:absolute; top:0; left:0; right:0; height:1px; background: linear-gradient(90deg, transparent, var(--gold), transparent); opacity:0.4; }
         .card-title { font-family: 'Space Mono', monospace; font-size: 10px; letter-spacing: 3px; color: var(--gold); text-transform: uppercase; margin-bottom: 16px; }
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+        .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px; }
+        @media(max-width:800px) { .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; } }
+
+        /* Form */
         .field { margin-bottom: 12px; }
-        .field label { display: block; font-family: 'Space Mono', monospace; font-size: 9px; letter-spacing: 2px; color: var(--muted); margin-bottom: 4px; }
-        .field input, .field select { width: 100%; background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 10px; border-radius: 3px; font-family: 'Space Mono', monospace; }
-        .btn { font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; padding: 12px; border: none; border-radius: 3px; cursor: pointer; width: 100%; }
+        .field label { display: block; font-family: 'Space Mono', monospace; font-size: 9px; letter-spacing: 2px; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; }
+        .field input, .field select {
+            width: 100%; background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+            padding: 10px 12px; border-radius: 3px; font-family: 'Space Mono', monospace; font-size: 12px; outline: none;
+        }
+        .btn {
+            font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+            padding: 12px 20px; border: none; border-radius: 3px; cursor: pointer; width: 100%; transition: all 0.2s;
+        }
         .btn-gold { background: linear-gradient(90deg, var(--gold) 0%, #8c6b1f 100%); color: #000; font-weight: 700; }
-        .stat-box { background: var(--surface2); border: 1px solid var(--border); padding: 14px; text-align: center; }
-        .s-label { font-family: 'Space Mono', monospace; font-size: 8px; color: var(--muted); }
-        .s-val { font-family: 'Bebas Neue', sans-serif; font-size: 26px; }
-        .back-btn { background: none; border: none; color: var(--muted); font-family: 'Space Mono', monospace; cursor: pointer; }
+        .btn-gold:hover { opacity: 0.85; transform: translateY(-1px); }
+        .btn-gold:disabled { opacity: 0.4; pointer-events: none; }
+        .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--muted); width: auto; }
+        .btn-outline:hover { border-color: var(--gold); color: var(--gold); }
+
+        /* Stat boxes */
+        .stat-box { background: var(--surface2); border: 1px solid var(--border); border-radius: 3px; padding: 14px; text-align: center; }
+        .stat-box .s-label { font-family: 'Space Mono', monospace; font-size: 8px; letter-spacing: 2px; color: var(--muted); margin-bottom: 4px; }
+        .stat-box .s-val { font-family: 'Bebas Neue', sans-serif; font-size: 26px; }
+
+        /* Edge badge */
+        .edge-badge { font-family: 'Space Mono', monospace; font-size: 10px; padding: 2px 8px; border-radius: 2px; }
+        .edge-green { background: rgba(0,229,160,0.1); color: var(--green); border: 1px solid rgba(0,229,160,0.2); }
+        .edge-yellow { background: rgba(212,175,55,0.1); color: var(--gold); border: 1px solid rgba(212,175,55,0.2); }
+        .edge-red { background: rgba(255,77,77,0.1); color: var(--red); border: 1px solid rgba(255,77,77,0.2); }
+
+        /* Journal */
+        .journal-item { padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 12px; }
+        .j-row { display: flex; justify-content: space-between; align-items: center; }
+        .j-pair { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--text); }
+        .j-r { font-family: 'Space Mono', monospace; font-weight: bold; }
+        .j-win { color: var(--green); } .j-loss { color: var(--red); }
+        .j-del { background: none; border: none; color: var(--muted); cursor: pointer; }
+
+        .warn-bar { background: rgba(255,77,77,0.08); border: 1px solid rgba(255,77,77,0.2); border-radius: 3px; padding: 10px 14px; font-size: 12px; color: #ff9999; display: none; margin-top: 12px; }
+        .feedback-block { background: var(--surface2); border: 1px solid var(--border); border-radius: 3px; padding: 10px; font-size: 11px; color: var(--muted); margin-top: 8px; }
+
+        .chart-wrap { height: 250px; }
+        .empty-state { text-align: center; padding: 30px; color: var(--muted); font-family: 'Space Mono', monospace; font-size: 12px; }
+
+        /* Modal */
+        .modal-overlay { display: none; position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.8); z-index:100; align-items:center; justify-content:center; }
+        .modal-overlay.visible { display:flex; }
+        .modal-card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 24px; width: 400px; max-width:90%; }
+
         @keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+
+        /* Back button */
+        .back-btn { background: none; border: none; color: var(--muted); font-family: 'Space Mono', monospace; font-size: 10px; cursor: pointer; margin-right: 16px; }
+        .back-btn:hover { color: var(--gold); }
     </style>
 </head>
 <body>
-<div class="app">
-    <!-- LAUNCHER -->
+<div class="app" id="app-container">
+    <!-- ── LAUNCHER VIEW ── -->
     <div id="view-launcher" class="view active">
         <div class="header">
-            <div class="header-left"><div class="eyebrow">Independent Strategy Desks</div><h1>TiDyn Matrix OS</h1></div>
+            <div class="header-left">
+                <div class="eyebrow">Independent Strategy Desks</div>
+                <h1>TiDyn Matrix OS</h1>
+            </div>
+            <button class="btn-outline" onclick="openSettings()">⚙ Settings</button>
         </div>
+
         <div class="grid-2">
+            <!-- Trading Card -->
             <div class="card">
                 <div class="card-title">Trader Engine</div>
-                <div class="stat-box"><div class="s-label">Bankroll</div><div class="s-val">$1,000</div></div>
-                <button class="btn btn-gold" style="margin-top:16px;" onclick="switchView('view-trader')">Launch Trader</button>
+                <div class="stat-box" style="margin-bottom:12px;">
+                    <div class="s-label">Trading Bankroll</div>
+                    <div class="s-val" id="launch-trading-balance">$1,000</div>
+                </div>
+                <div class="stat-box" style="margin-bottom:12px;">
+                    <div class="s-label">Edge Status</div>
+                    <div class="s-val" id="launch-trading-edge">—</div>
+                </div>
+                <button class="btn btn-gold" onclick="launchEngine('trader')">Launch Trader</button>
             </div>
+
+            <!-- Betting Card -->
             <div class="card">
                 <div class="card-title">Multiversal Engine</div>
-                <div class="stat-box"><div class="s-label">Bankroll</div><div class="s-val">$500</div></div>
-                <button class="btn btn-gold" style="margin-top:16px;" onclick="switchView('view-betting')">Launch Betting</button>
+                <div class="stat-box" style="margin-bottom:12px;">
+                    <div class="s-label">Betting Bankroll</div>
+                    <div class="s-val" id="launch-betting-balance">$500</div>
+                </div>
+                <div class="stat-box" style="margin-bottom:12px;">
+                    <div class="s-label">Edge Status</div>
+                    <div class="s-val" id="launch-betting-edge">—</div>
+                </div>
+                <button class="btn btn-gold" onclick="launchEngine('betting')">Launch Betting</button>
             </div>
         </div>
     </div>
 
-    <!-- TRADER DESK -->
+    <!-- ── TRADER VIEW ── -->
     <div id="view-trader" class="view">
-        <button class="back-btn" onclick="switchView('view-launcher')">← Back to OS</button>
-        <h2 style="font-family:'Bebas Neue'; color:var(--gold); margin:16px 0;">Trader Desk</h2>
-        <!-- Standard v5/v6 trading components go here -->
+        <div style="display:flex; align-items:center; margin-bottom:16px;">
+            <button class="back-btn" onclick="goLauncher()">← Back to OS</button>
+            <h2 style="font-family:'Bebas Neue'; font-size:28px; letter-spacing:2px; color:var(--gold);">Trader Desk</h2>
+        </div>
+        <div class="nav">
+            <button class="tab-btn active" data-tab="planner">Planner</button>
+            <button class="tab-btn" data-tab="journal">Journal</button>
+            <button class="tab-btn" data-tab="performance">Performance</button>
+        </div>
+
+        <!-- Planner -->
+        <div id="trader-planner" class="tab-content active">
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-title">Setup Scoring</div>
+                    <div class="field"><label>Trend</label><select id="t-trend"><option value="UP">Up</option><option value="DOWN">Down</option><option value="CHOPPY">Choppy</option></select></div>
+                    <div class="field"><label>Session</label><select id="t-session"><option value="LONDON">London</option><option value="NY">New York</option><option value="ASIA">Asia</option></select></div>
+                    <div class="field"><label>Structure</label><select id="t-structure"><option value="BREAKOUT">Breakout</option><option value="REJECTION">Rejection</option><option value="OTHER">Weak</option></select></div>
+                    <div class="field"><label>R:R Target</label><input id="t-rr" type="number" value="2.5" step="0.1"/></div>
+                    <div class="field" style="display:flex; gap:10px;"><label><input type="checkbox" id="t-revenge"> Revenge</label><label><input type="checkbox" id="t-overtrading"> Overtrading</label></div>
+                    <button class="btn btn-gold" onclick="scoreTradeSetup()">Score Setup</button>
+                    <div id="t-score-result" style="margin-top:12px;"></div>
+                </div>
+                <div class="card">
+                    <div class="card-title">Log Trade</div>
+                    <div class="field"><label>Pair</label><input id="t-pair" placeholder="EUR/USD"/></div>
+                    <div class="field"><label>Direction</label><select id="t-direction"><option value="Long">Long</option><option value="Short">Short</option></select></div>
+                    <div class="field"><label>Entry</label><input id="t-entry" type="number" step="0.00001"/></div>
+                    <div class="field"><label>Stop</label><input id="t-stop" type="number" step="0.00001"/></div>
+                    <div class="field"><label>Exit</label><input id="t-exit" type="number" step="0.00001"/></div>
+                    <div class="field"><label>Notes</label><input id="t-notes"/></div>
+                    <button class="btn btn-gold" id="t-log-btn" onclick="logTrade()">Execute Trade</button>
+                    <div id="t-daily-warn" class="warn-bar">⚠ Daily loss limit hit.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Journal -->
+        <div id="trader-journal" class="tab-content" style="display:none;">
+            <div class="card">
+                <div class="card-title">Trade Journal</div>
+                <div id="t-journal-list"></div>
+                <button class="btn-outline" onclick="clearTraderTrades()" style="margin-top:8px;">Clear All</button>
+            </div>
+        </div>
+
+        <!-- Performance -->
+        <div id="trader-performance" class="tab-content" style="display:none;">
+            <div class="grid-4" style="margin-bottom:20px;">
+                <div class="stat-box"><div class="s-label">Trades</div><div class="s-val" id="t-total">0</div></div>
+                <div class="stat-box"><div class="s-label">Win Rate</div><div class="s-val" id="t-wr">0%</div></div>
+                <div class="stat-box"><div class="s-label">Bankroll</div><div class="s-val" id="t-bal">$0</div></div>
+                <div class="stat-box"><div class="s-label">Max DD</div><div class="s-val" id="t-dd">0%</div></div>
+            </div>
+            <div class="grid-4" style="margin-bottom:20px;">
+                <div class="stat-box"><div class="s-label">P&L</div><div class="s-val" id="t-pnl">$0</div></div>
+                <div class="stat-box"><div class="s-label">Avg R</div><div class="s-val" id="t-avgR">—</div></div>
+                <div class="stat-box"><div class="s-label">Profit Factor</div><div class="s-val" id="t-pf">—</div></div>
+                <div class="stat-box"><div class="s-label">Edge (30)</div><div class="s-val" id="t-edge">—</div></div>
+            </div>
+            <div class="card"><div class="card-title">Equity Curve</div><div class="chart-wrap"><canvas id="t-chart"></canvas></div></div>
+        </div>
     </div>
 
-    <!-- BETTING DESK -->
+    <!-- ── BETTING VIEW ── -->
     <div id="view-betting" class="view">
-        <button class="back-btn" onclick="switchView('view-launcher')">← Back to OS</button>
-        <h2 style="font-family:'Bebas Neue'; color:var(--gold); margin:16px 0;">Multiversal Desk</h2>
-        <!-- Standard v5/v6 betting components go here -->
+        <div style="display:flex; align-items:center; margin-bottom:16px;">
+            <button class="back-btn" onclick="goLauncher()">← Back to OS</button>
+            <h2 style="font-family:'Bebas Neue'; font-size:28px; letter-spacing:2px; color:var(--gold);">Multiversal Desk</h2>
+        </div>
+        <div class="nav">
+            <button class="tab-btn active" data-tab="planner">Planner</button>
+            <button class="tab-btn" data-tab="journal">Journal</button>
+            <button class="tab-btn" data-tab="performance">Performance</button>
+        </div>
+
+        <!-- Planner -->
+        <div id="betting-planner" class="tab-content active">
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-title">Setup Scoring</div>
+                    <div class="field"><label>Event</label><input id="b-event" placeholder="Arsenal vs Chelsea"/></div>
+                    <div class="field"><label>Selection</label><input id="b-selection" placeholder="Arsenal win"/></div>
+                    <div class="field"><label>Odds (Decimal)</label><input id="b-odds" type="number" step="0.01" value="2.0"/></div>
+                    <div class="field"><label>Est. Probability %</label><input id="b-prob" type="number" step="0.1" value="55"/></div>
+                    <div class="field"><label>Market</label><select id="b-liquidity"><option value="Major">Major</option><option value="Minor">Minor</option><option value="Obscure">Obscure</option></select></div>
+                    <div class="field"><label>Form</label><select id="b-form"><option value="Strong">Strong</option><option value="Neutral">Neutral</option><option value="Weak">Weak</option></select></div>
+                    <div class="field" style="display:flex;"><label><input type="checkbox" id="b-chase"> Chasing</label><label style="margin-left:12px;"><input type="checkbox" id="b-overstaking"> Overstaking</label></div>
+                    <button class="btn btn-gold" onclick="scoreBetSetup()">Score Setup</button>
+                    <div id="b-score-result" style="margin-top:12px;"></div>
+                </div>
+                <div class="card">
+                    <div class="card-title">Place Bet</div>
+                    <div class="field"><label>Stake Override (optional)</label><input id="b-stake-override" type="number" step="0.01"/></div>
+                    <button class="btn btn-gold" id="b-log-btn" onclick="logBet()">Place Bet</button>
+                    <div id="b-daily-warn" class="warn-bar">⚠ Daily loss limit hit.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Journal -->
+        <div id="betting-journal" class="tab-content" style="display:none;">
+            <div class="card">
+                <div class="card-title">Bet Journal</div>
+                <div id="b-journal-list"></div>
+                <button class="btn-outline" onclick="clearBettingBets()" style="margin-top:8px;">Clear All</button>
+            </div>
+        </div>
+
+        <!-- Performance -->
+        <div id="betting-performance" class="tab-content" style="display:none;">
+            <div class="grid-4" style="margin-bottom:20px;">
+                <div class="stat-box"><div class="s-label">Bets</div><div class="s-val" id="b-total">0</div></div>
+                <div class="stat-box"><div class="s-label">Win Rate</div><div class="s-val" id="b-wr">0%</div></div>
+                <div class="stat-box"><div class="s-label">Bankroll</div><div class="s-val" id="b-bal">$0</div></div>
+                <div class="stat-box"><div class="s-label">Max DD</div><div class="s-val" id="b-dd">0%</div></div>
+            </div>
+            <div class="grid-4" style="margin-bottom:20px;">
+                <div class="stat-box"><div class="s-label">P&L</div><div class="s-val" id="b-pnl">$0</div></div>
+                <div class="stat-box"><div class="s-label">ROI</div><div class="s-val" id="b-roi">—</div></div>
+                <div class="stat-box"><div class="s-label">Profit Factor</div><div class="s-val" id="b-pf">—</div></div>
+                <div class="stat-box"><div class="s-label">Edge (30)</div><div class="s-val" id="b-edge">—</div></div>
+            </div>
+            <div class="card"><div class="card-title">Equity Curve</div><div class="chart-wrap"><canvas id="b-chart"></canvas></div></div>
+        </div>
     </div>
 </div>
 
-<script>
-    function switchView(viewId) {
-        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-        document.getElementById(viewId).classList.add('active');
-    }
-</script>
-</body>
-                  </html>
-      
+<!-- Global Settings Modal -->
+<div class="modal-overlay" id="settings-modal">
+    <div class="modal-card">
+        <h3 class="card-title">Global Settings</h3>
+        <div class="field"><label>Trader Starting Bankroll ($)</label><input id="set-trader-bank" type="number" value="1000"/></div>
+        <div class="field"><label>Betting Starting Bankroll ($)</label><input id="set-betting-bank" type="number" value="500"/></div>
+        <div style="display:flex; gap:10px; margin-top:16px;">
+            <button class="btn btn-gold" onclick="saveSettings()">Save</button>
+            <button clas
